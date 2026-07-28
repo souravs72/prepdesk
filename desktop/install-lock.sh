@@ -5,7 +5,11 @@ BIN="$HOME/.local/bin"
 AUTO="$HOME/.config/autostart"
 mkdir -p "$BIN" "$AUTO" "$HOME/.config/prepdesk"
 
-chmod +x "$ROOT/desktop/lock_shell.py" "$ROOT/desktop/prepdesk-lock" "$ROOT/desktop/show-bypass.sh"
+chmod +x \
+  "$ROOT/desktop/native_lock.py" \
+  "$ROOT/desktop/prepdesk-lock" \
+  "$ROOT/desktop/show-bypass.sh" \
+  "$ROOT/desktop/lock_shell.py"
 
 ln -sfn "$ROOT/desktop/prepdesk-lock" "$BIN/prepdesk-lock"
 ln -sfn "$ROOT/desktop/show-bypass.sh" "$BIN/prepdesk-show-bypass"
@@ -92,7 +96,7 @@ echo
 echo "IMPORTANT: write down the bypass key before next login:"
 echo "  prepdesk-show-bypass"
 echo
-echo "While locked, Alt+Tab / Super / logout shortcuts are disabled via gsettings and restored on unlock."
+echo "Native GTK lock grabs keyboard+mouse when possible; gsettings disables Alt+Tab/Super/logout until unlock."
 echo "Hard power-button shutdown is NOT blocked."
 echo
 echo "Test now:  prepdesk-lock"

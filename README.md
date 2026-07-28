@@ -26,15 +26,17 @@ npm run dev
 
 Open [http://127.0.0.1:5173](http://127.0.0.1:5173). API on `127.0.0.1:4789`.
 
-## Desktop lock (cannot dismiss until solved)
+## Desktop lock — native GTK (cannot dismiss until solved)
 
-Fullscreen GTK/WebKit shell that stays on top until you solve the frozen question **correctly**, or type the emergency bypass UUID (paste disabled).
+Pure **GTK3** fullscreen lock (no WebKit). Grabs keyboard + pointer when the session allows it, disables GNOME Alt+Tab / Super / logout shortcuts until you solve an MCQ/objective question **correctly**, or type the emergency bypass key (paste blocked).
 
 ```bash
 npm run install-lock          # autostart + ~/.config/prepdesk/bypass.key
 prepdesk-show-bypass          # WRITE THIS DOWN (TTY-safe)
-prepdesk-lock                 # test the lock now
+prepdesk-lock                 # test the native lock now
 ```
+
+Needs: `python3-gi`, GTK 3. Runner API auto-starts (`npm run runner`) for unlock/analytics. Study UI (`npm run dev`) is optional.
 
 OpenAI explanations use `OPENAI_API_KEY` + model from:
 
@@ -51,14 +53,14 @@ npm run build
 ## Architecture
 
 ```text
-src/
-  components/     # Shell, QuestionPanel, UI primitives
-  features/       # Today, Practice, Playground, Mock, Analytics, Coach
-  lib/generator/  # Seeded daily + practice generators
-  lib/progress/   # Zustand persistence + grading
-  lib/ai/         # Local coach + optional OpenAI
-server/runner.mjs # Sandboxed-ish local execution
-tests/            # Vitest
+desktop/
+  native_lock.py      # Native GTK lock UI + seat grab
+  native_questions.py # Lock MCQ/objective bank + grading
+  keybinds.py         # GNOME shortcut snapshot/restore
+  lock_shell.py       # Legacy WebKit shell (unused by default)
+src/                  # Browser study app (Vite/React)
+server/runner.mjs     # Local API: run, lock arm/unlock, analytics
+tests/                # Vitest
 ```
 
 ## Notes
