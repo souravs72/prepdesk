@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PREPDESK_URL="${PREPDESK_URL:-http://127.0.0.1:5173/lock}"
+cd "$ROOT"
+# Prefer system python with GTK/WebKit
+exec /usr/bin/python3 "$ROOT/desktop/lock_shell.py" "$@"

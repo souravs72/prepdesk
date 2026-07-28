@@ -1,0 +1,53 @@
+{
+  "name": "prepdesk",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -k -n web,runner -c teal,yellow \"vite\" \"node server/runner.mjs\"",
+    "dev:web": "vite",
+    "runner": "node server/runner.mjs",
+    "lock": "desktop/prepdesk-lock",
+    "show-bypass": "desktop/show-bypass.sh",
+    "rotate-bypass": "desktop/rotate-bypass.sh",
+    "install-lock": "desktop/install-lock.sh",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "clsx": "^2.1.1",
+    "cors": "^2.8.6",
+    "date-fns": "^4.4.0",
+    "express": "^5.2.1",
+    "framer-motion": "^12.43.0",
+    "lucide-react": "^1.27.0",
+    "monaco-editor": "^0.56.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
+    "react-router-dom": "^7.18.2",
+    "remark-gfm": "^4.0.1",
+    "uuid": "^14.0.1",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^24.13.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "concurrently": "^10.0.4",
+    "jsdom": "^30.0.0",
+    "oxlint": "^1.71.0",
+    "tailwindcss": "^4.3.3",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  }
+}
