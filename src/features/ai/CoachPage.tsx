@@ -11,7 +11,7 @@ export function CoachPage() {
   const [key, setKey] = useState(() => localStorage.getItem('prepilo-openai-key') ?? '')
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-8">
+    <div className="mx-auto h-full max-w-3xl space-y-6 overflow-auto p-8">
       <header>
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
           AI coach

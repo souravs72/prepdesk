@@ -1,28 +1,65 @@
 # Prepilo
 
-Desktop interview preparation platform.
+**Desktop interview prep for engineers.** Daily practice, a Monaco coding playground, mock rounds, and analytics — with an optional session lock that gates login, logout, and shutdown behind a real interview question.
 
-<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/4d694945-ca0b-4cba-bf57-6fcbd99e21ee" />
-<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/cfd686ac-ddf8-424e-8772-0fb193ceac74" />
-<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/fb7c3627-1c59-4cd3-9134-25be53346c9c" />
-<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/70fe12f4-bb3e-43a0-b949-79c3efd18076" />
+[![Release](https://img.shields.io/github/v/release/souravs72/prepilo?label=release)](https://github.com/souravs72/prepilo/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Linux-informational)](https://github.com/souravs72/prepilo/releases)
 
+---
 
-- **Study app:** Electron desktop window  
-- **Session lock:** GTK + WebKit (Ubuntu/GNOME), optional  
+## Screenshots
 
-## Install (end users)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/4d694945-ca0b-4cba-bf57-6fcbd99e21ee" alt="Prepilo Today — daily interview set" width="900" />
+</p>
+<p align="center"><em>Today — structured daily set across coding, MCQ, and short answers</em></p>
 
-### One-liner (recommended)
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/cfd686ac-ddf8-424e-8772-0fb193ceac74" alt="Prepilo Practice — topic filters" width="900" />
+</p>
+<p align="center"><em>Practice — filter by difficulty, topic, company, and question type</em></p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/fb7c3627-1c59-4cd3-9134-25be53346c9c" alt="Prepilo Playground — Monaco editor" width="900" />
+</p>
+<p align="center"><em>Playground — multi-language Monaco editor with local sample and hidden tests</em></p>
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/70fe12f4-bb3e-43a0-b949-79c3efd18076" alt="Prepilo Analytics" width="900" />
+</p>
+<p align="center"><em>Analytics — streaks, accuracy, and topic coverage over time</em></p>
+
+---
+
+## Features
+
+| Area | What you get |
+|------|----------------|
+| **Today** | A fresh daily set of original interview-style questions |
+| **Practice** | Filters for DSA, system design, OS, DBMS, company tags, and more |
+| **Playground** | Monaco IDE · Python, JavaScript, Java, C++, Go, Rust · local runner |
+| **Mock** | Timed interview-style rounds |
+| **Analytics** | Streaks, accuracy, and topic heat |
+| **Coach** | Hints and explanations (local by default; optional OpenAI) |
+| **Session lock** | Optional GTK lock that requires solving a question to unlock the desktop |
+
+Questions are generated combinatorially — not scraped LeetCode dumps. Progress and drafts stay on your machine under `~/.config/prepilo`.
+
+---
+
+## Install (Linux)
+
+### Recommended — one-liner
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/souravs72/prepilo/main/scripts/install-linux.sh | bash -s -- --download
 prepilo
 ```
 
-This downloads the latest GitHub Release AppImage, **extracts it** (works without FUSE), installs icons + a desktop launcher, and wires the `prepilo` command.
+Downloads the latest [GitHub Release](https://github.com/souravs72/prepilo/releases/latest) AppImage, extracts it (works **without FUSE**), installs icons and a desktop entry, and adds the `prepilo` command to `~/.local/bin`.
 
-### Option A — AppImage file you already downloaded
+### From a downloaded AppImage
 
 ```bash
 chmod +x Prepilo-*-linux-x86_64.AppImage
@@ -30,80 +67,95 @@ chmod +x Prepilo-*-linux-x86_64.AppImage
 prepilo
 ```
 
-### Option B — `.deb`
+### From a `.deb`
 
 ```bash
 sudo apt install ./prepilo_*_amd64.deb
 ```
 
-### Option C — from source (developers)
+### Uninstall
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/souravs72/prepilo/main/scripts/uninstall-linux.sh | bash
+# or, from a checkout:
+./scripts/uninstall-linux.sh
+```
+
+---
+
+## Session lock (optional, Ubuntu / GNOME)
+
+Gates login, logout, and shutdown behind a Prepilo question.
+
+```bash
+npm run install-lock   # from a source checkout
+prepilo-show-bypass    # save this key somewhere safe
+prepilo-lock
+```
+
+**Dependencies:** `python3-gi`, GTK 3, `gir1.2-webkit2-4.1`
+
+Bypass key: `~/.config/prepilo/bypass.key` (never commit).
+
+If you get stuck: switch to a TTY (`Ctrl+Alt+F3`), then run `prepilo-show-bypass` or `desktop/uninstall-lock.sh`.
+
+---
+
+## Develop from source
+
+**Requirements:** Node.js 22+, Linux recommended for the full Electron + lock stack.
 
 ```bash
 git clone https://github.com/souravs72/prepilo.git
 cd prepilo
 npm install
-npm run build
-npm run install-app    # study app launcher (dev)
-npm run install-lock   # optional GTK login/logout lock
-prepilo
+npm run dev            # Vite UI + local runner on :4789
+npm run electron:dev   # Electron shell against the Vite server
 ```
 
-Uninstall user install: `scripts/uninstall-linux.sh`
+Useful scripts:
 
-## Build distributables (maintainers)
+| Command | Purpose |
+|---------|---------|
+| `npm run build` | Production web bundle → `dist/` |
+| `npm run dist` | Build AppImage + `.deb` → `release/` |
+| `npm run install-app` | Install study-app launcher for this checkout |
+| `npm run install-lock` | Install optional GTK session lock |
+| `npm test` | Vitest suite |
+| `npm run runner` | Local code-runner API only (`127.0.0.1:4789`) |
+
+### Publish a release
 
 ```bash
 npm ci
-npm run dist           # → release/*.AppImage and release/*.deb
+npm run dist           # smoke-test packages locally
+git tag vX.Y.Z
+git push origin vX.Y.Z # GitHub Actions builds AppImage + deb
 ```
 
-Tag a version to publish via GitHub Actions:
-
-```bash
-git tag v1.1.1
-git push origin v1.1.1
-```
-
-## Features
-
-- Daily set of original interview-style questions (DSA, system design, OS, DBMS)
-- Practice, playground (Monaco), mock interviews, analytics, AI coach
-- Optional desktop lock that gates login / logout / shutdown behind a question
-- Local code runner API on `127.0.0.1:4789`
-
-## Desktop lock (optional, Ubuntu)
-
-```bash
-npm run install-lock
-prepilo-show-bypass   # write this down
-prepilo-lock
-```
-
-Needs: `python3-gi`, GTK 3, `gir1.2-webkit2-4.1`. Bypass key lives in `~/.config/prepilo/bypass.key` (local only — never commit).
-
-Stuck? `Ctrl+Alt+F3` → `prepilo-show-bypass` or `desktop/uninstall-lock.sh`.
-
-OpenAI (optional) from `~/.config/daily-work-digest/.env` + `config.yaml`.
+---
 
 ## Architecture
 
 ```text
-electron/     Study UI shell (Electron)
-desktop/      GTK lock + session guard
-src/          React UI
-server/       Local runner API
-release/      Built AppImage/deb (gitignored)
+electron/     Electron study shell, icons, installers
+desktop/      GTK + WebKit session lock and guard
+src/          React UI (Today, Practice, Playground, Mock, Analytics, Coach)
+server/       Local runner API (Express on 127.0.0.1:4789)
+scripts/      Linux install / uninstall helpers
+.github/      Release workflow (tag v* → AppImage + deb)
 ```
 
-## Local vs GitHub
+| Keep local | Ship in the repo |
+|------------|------------------|
+| `node_modules/`, `dist/`, `release/` | `src/`, `electron/`, `desktop/`, `server/`, `scripts/` |
+| `~/.config/prepilo/*` | Icons, workflows, package manifests |
+| API keys / `.env` | Tests and public docs |
 
-| Keep local only | Commit to GitHub |
-|-----------------|------------------|
-| `node_modules/`, `dist/`, `release/` | Source under `src/`, `electron/`, `desktop/`, `server/` |
-| `~/.config/prepilo/*` (bypass, analytics) | `README`, workflows, icons |
-| API keys / `.env` | Tests, package manifests |
+Optional OpenAI coaching can read credentials from `~/.config/daily-work-digest/.env` and `config.yaml` when present.
 
-## Notes
+---
 
-- Questions are original / combinatorial — not scraped LeetCode dumps.
-- Repo should be **public** (or Releases public) for others to download packages.
+## License
+
+[MIT](LICENSE) © Prepilo contributors

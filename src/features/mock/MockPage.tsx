@@ -46,7 +46,7 @@ export function MockPage() {
   const ss = String(seconds % 60).padStart(2, '0')
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 p-8">
+    <div className="mx-auto h-full max-w-6xl space-y-6 overflow-auto p-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
