@@ -164,10 +164,19 @@ export const useProgress = create<ProgressState>()(
         })),
     }),
     {
-      name: 'prepdesk-progress-v3',
+      name: 'prepilo-progress-v3',
       version: 3,
       migrate: (persisted: unknown) => {
-        const s = (persisted ?? {}) as Record<string, unknown>
+        let s = (persisted ?? {}) as Record<string, unknown>
+        // Migrate browser progress from PrepDesk localStorage key if present
+        if ((!s || Object.keys(s).length === 0) && typeof localStorage !== 'undefined') {
+          try {
+            const legacy = localStorage.getItem('prepdesk-progress-v3')
+            if (legacy) s = JSON.parse(legacy)?.state ?? JSON.parse(legacy) ?? s
+          } catch {
+            /* ignore */
+          }
+        }
         return {
           attempts: Array.isArray(s.attempts) ? s.attempts : [],
           solvedIds: Array.isArray(s.solvedIds) ? s.solvedIds : [],

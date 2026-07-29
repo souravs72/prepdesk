@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Temporarily disable GNOME shell/wm shortcuts while PrepDesk Lock is active.
+"""Temporarily disable GNOME shell/wm shortcuts while Prepilo Lock is active.
 
 Snapshot gsettings FIRST (atomic), then clear. Restore on unlock/crash helpers.
 Does not block the hardware power button.
@@ -11,7 +11,10 @@ import json
 import subprocess
 from pathlib import Path
 
-BACKUP = Path.home() / ".config" / "prepdesk" / "keybinds-backup.json"
+from paths import CONFIG, ensure_config
+
+ensure_config()
+BACKUP = CONFIG / "keybinds-backup.json"
 BACKUP_TMP = BACKUP.with_suffix(".json.tmp")
 
 BINDINGS: list[tuple[str, str]] = [

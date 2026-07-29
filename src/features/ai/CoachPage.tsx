@@ -8,7 +8,7 @@ export function CoachPage() {
   const q = getDaily()[0]!
   const [prompt, setPrompt] = useState('Give me a hint without revealing the answer.')
   const [out, setOut] = useState('')
-  const [key, setKey] = useState(() => localStorage.getItem('prepdesk-openai-key') ?? '')
+  const [key, setKey] = useState(() => localStorage.getItem('prepilo-openai-key') ?? '')
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-8">
@@ -27,14 +27,14 @@ export function CoachPage() {
             value={key}
             onChange={(e) => {
               setKey(e.target.value)
-              localStorage.setItem('prepdesk-openai-key', e.target.value)
+              localStorage.setItem('prepilo-openai-key', e.target.value)
             }}
             className="mt-1 w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2"
             placeholder="sk-..."
           />
         </label>
         <p className="text-xs text-[var(--color-muted)]">
-          Without a key, PrepDesk uses a local progressive hint engine. Context: today’s first question —
+          Without a key, Prepilo uses a local progressive hint engine. Context: today’s first question —
           “{q.title}”.
         </p>
         <textarea

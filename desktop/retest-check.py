@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""If a retest is due (accuracy < 80% scheduled), launch PrepDesk Lock."""
+"""If a retest is due (accuracy < 80% scheduled), launch Prepilo Lock."""
 
 from __future__ import annotations
 
@@ -9,10 +9,13 @@ import subprocess
 import time
 from pathlib import Path
 
-STATE = Path.home() / ".config" / "prepdesk" / "retest.json"
-LOCK_PID = Path.home() / ".config" / "prepdesk" / "lock.pid"
-LOCK_BIN = Path.home() / ".local" / "bin" / "prepdesk-lock"
-ROOT_LOCK = Path(__file__).resolve().parent / "prepdesk-lock"
+from paths import CONFIG, ensure_config
+
+ensure_config()
+STATE = CONFIG / "retest.json"
+LOCK_PID = CONFIG / "lock.pid"
+LOCK_BIN = Path.home() / ".local" / "bin" / "prepilo-lock"
+ROOT_LOCK = Path(__file__).resolve().parent / "prepilo-lock"
 
 
 def lock_already_running() -> bool:

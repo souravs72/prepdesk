@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PrepDesk local API: code runner + lock session + OpenAI explanations.
+ * Prepilo local API: code runner + lock session + OpenAI explanations.
  * OpenAI key loaded from ~/.config/daily-work-digest/.env (never sent to the browser).
  */
 import cors from 'cors'
@@ -16,7 +16,8 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const PORT = 4789
-const CONFIG_DIR = path.join(os.homedir(), '.config', 'prepdesk')
+const LEGACY_CONFIG_DIR = path.join(os.homedir(), '.config', 'prepdesk')
+const CONFIG_DIR = path.join(os.homedir(), '.config', 'prepilo')
 const BYPASS_FILE = path.join(CONFIG_DIR, 'bypass.key')
 const LOCK_FILE = path.join(CONFIG_DIR, 'lock-state.json')
 const SESSION_FILE = path.join(CONFIG_DIR, 'lock-session.json')
@@ -44,6 +45,20 @@ if (fsSync.existsSync(DIST)) {
 
 function ensureConfigDir() {
   fsSync.mkdirSync(CONFIG_DIR, { recursive: true })
+  // One-time migrate from PrepDesk config if present
+  if (fsSync.existsSync(LEGACY_CONFIG_DIR)) {
+    for (const name of ['bypass.key', 'analytics.json', 'retest.json', 'keybinds-backup.json']) {
+      const from = path.join(LEGACY_CONFIG_DIR, name)
+      const to = path.join(CONFIG_DIR, name)
+      if (fsSync.existsSync(from) && !fsSync.existsSync(to)) {
+        try {
+          fsSync.copyFileSync(from, to)
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }
 }
 
 function loadDotEnv(filePath) {
@@ -129,7 +144,11 @@ function writeSession(session) {
 }
 
 function requireLockToken(req) {
-  const token = req.headers['x-prepdesk-token'] || req.body?.token || req.query?.token
+  const token =
+    req.headers['x-prepilo-token'] ||
+    req.headers['x-prepdesk-token'] ||
+    req.body?.token ||
+    req.query?.token
   const session = readSession()
   if (!session?.token || !token || token !== session.token) return false
   return true
@@ -171,7 +190,7 @@ function exec(command, args, cwd, timeoutMs, input = '') {
 }
 
 async function runOnce(language, code, input, timeoutMs = 4000) {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'prepdesk-'))
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'prepilo-'))
   const started = Date.now()
   try {
     let command
@@ -281,7 +300,7 @@ app.get('/lock/bypass-meta', (_req, res) => {
   res.json({
     length: key.length,
     path: BYPASS_FILE,
-    hint: 'Type the full key from ~/.config/prepdesk/bypass.key — paste is disabled in the lock UI.',
+    hint: 'Type the full key from ~/.config/prepilo/bypass.key — paste is disabled in the lock UI.',
   })
 })
 
@@ -569,7 +588,7 @@ ensureBypassKey()
 // Do not reset lock state on API restart — avoids re-locking after unlock mid-session.
 
 app.listen(PORT, '127.0.0.1', () => {
-  console.log(`PrepDesk API on http://127.0.0.1:${PORT}`)
+  console.log(`Prepilo API on http://127.0.0.1:${PORT}`)
   console.log(`Bypass key file: ${BYPASS_FILE}`)
   const { apiKey, model } = loadOpenAIConfig()
   console.log(`OpenAI: ${apiKey ? 'configured' : 'missing'} (model ${model})`)

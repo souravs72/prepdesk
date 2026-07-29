@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PrepDesk session guard — logout/shutdown/suspend stay blocked until a lock question is solved."""
+"""Prepilo session guard — logout/shutdown/suspend stay blocked until a lock question is solved."""
 
 from __future__ import annotations
 
@@ -19,11 +19,14 @@ gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
-CONFIG = Path.home() / ".config" / "prepdesk"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from paths import CONFIG, ensure_config  # noqa: E402
+
+ensure_config()
 PID_FILE = CONFIG / "session-guard.pid"
 PENDING_FILE = CONFIG / "pending-session-end.json"
-LOCK_BIN = Path.home() / ".local" / "bin" / "prepdesk-lock"
-LOCK_SCRIPT = ROOT / "desktop" / "prepdesk-lock"
+LOCK_BIN = Path.home() / ".local" / "bin" / "prepilo-lock"
+LOCK_SCRIPT = ROOT / "desktop" / "prepilo-lock"
 
 
 class SessionGuard:
@@ -39,7 +42,7 @@ class SessionGuard:
     def run(self) -> int:
         CONFIG.mkdir(parents=True, exist_ok=True)
         if not self._claim_pid():
-            print("PrepDesk session guard already running", file=sys.stderr)
+            print("Prepilo session guard already running", file=sys.stderr)
             return 0
 
         atexit.register(self._cleanup)
@@ -47,13 +50,13 @@ class SessionGuard:
         signal.signal(signal.SIGINT, self._on_signal)
 
         self._connect_dbus()
-        self._take_inhibits("PrepDesk: solve a question to end or suspend the session")
+        self._take_inhibits("Prepilo: solve a question to end or suspend the session")
         self._watch_logind()
         GLib.timeout_add_seconds(1, self._check_pending_file)
         GLib.timeout_add_seconds(30, self._heartbeat)
         GLib.timeout_add_seconds(8, self._ensure_login_lock_once)
 
-        print("PrepDesk session guard active (logout/shutdown gated)", flush=True)
+        print("Prepilo session guard active (logout/shutdown gated)", flush=True)
         try:
             self._loop.run()
         finally:
@@ -119,7 +122,7 @@ class SessionGuard:
             try:
                 result = self._sm.call_sync(
                     "Inhibit",
-                    GLib.Variant("(susu)", ("prepdesk", 0, why, 1 | 2 | 4 | 8)),
+                    GLib.Variant("(susu)", ("prepilo", 0, why, 1 | 2 | 4 | 8)),
                     Gio.DBusCallFlags.NONE,
                     -1,
                     None,
@@ -134,7 +137,7 @@ class SessionGuard:
                     [
                         "systemd-inhibit",
                         "--what=shutdown:sleep:idle:handle-power-key:handle-suspend-key:handle-hibernate-key",
-                        "--who=prepdesk",
+                        "--who=prepilo",
                         f"--why={why}",
                         "--mode=block",
                         "sleep",
@@ -206,7 +209,7 @@ class SessionGuard:
         if self._gnome_cookie is None or self._inhibit_proc is None or (
             self._inhibit_proc is not None and self._inhibit_proc.poll() is not None
         ):
-            self._take_inhibits("PrepDesk: solve a question to end or suspend the session")
+            self._take_inhibits("Prepilo: solve a question to end or suspend the session")
         return True
 
     def _ensure_login_lock_once(self) -> bool:
@@ -242,7 +245,7 @@ class SessionGuard:
             return
         cmd = str(LOCK_BIN if LOCK_BIN.exists() else LOCK_SCRIPT)
         env = os.environ.copy()
-        env["PREPDESK_GATE"] = gate
+        env["PREPILO_GATE"] = gate
         try:
             self._lock_proc = subprocess.Popen(
                 [cmd, "--gate", gate],
@@ -275,7 +278,7 @@ class SessionGuard:
 
         if not cleared:
             self._release_inhibits()
-            self._take_inhibits("PrepDesk: solve a question to end or suspend the session")
+            self._take_inhibits("Prepilo: solve a question to end or suspend the session")
             return
 
         # Login unlock (or solving a manually launched lock): never logout/poweroff.
@@ -287,7 +290,7 @@ class SessionGuard:
 
         if action is None:
             self._release_inhibits()
-            self._take_inhibits("PrepDesk: solve a question to end or suspend the session")
+            self._take_inhibits("Prepilo: solve a question to end or suspend the session")
             return
 
         self._release_inhibits()
@@ -297,7 +300,7 @@ class SessionGuard:
         end_actions = {"logout", "reboot", "poweroff", "shutdown", "suspend"}
         try:
             if action == "login" or action not in end_actions:
-                self._take_inhibits("PrepDesk: solve a question to end or suspend the session")
+                self._take_inhibits("Prepilo: solve a question to end or suspend the session")
                 return False
             if action == "logout":
                 subprocess.Popen(["gnome-session-quit", "--logout", "--no-prompt"])
@@ -309,7 +312,7 @@ class SessionGuard:
                 subprocess.Popen(["systemctl", "suspend"])
         except Exception as e:
             print(f"Session action failed: {e}", file=sys.stderr)
-            self._take_inhibits("PrepDesk: solve a question to end or suspend the session")
+            self._take_inhibits("Prepilo: solve a question to end or suspend the session")
         return False
 
 

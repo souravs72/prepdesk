@@ -4,29 +4,29 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$HOME/.local/bin"
 AUTO="$HOME/.config/autostart"
 SYSTEMD_USER="${HOME}/.config/systemd/user"
-mkdir -p "$BIN" "$AUTO" "$HOME/.config/prepdesk" "$SYSTEMD_USER"
+mkdir -p "$BIN" "$AUTO" "$HOME/.config/prepilo" "$SYSTEMD_USER"
 
 chmod +x \
   "$ROOT/desktop/native_lock.py" \
   "$ROOT/desktop/session_guard.py" \
-  "$ROOT/desktop/prepdesk-lock" \
-  "$ROOT/desktop/prepdesk-guard" \
+  "$ROOT/desktop/prepilo-lock" \
+  "$ROOT/desktop/prepilo-guard" \
   "$ROOT/desktop/end-session.sh" \
   "$ROOT/desktop/show-bypass.sh" \
   "$ROOT/desktop/lock_shell.py"
 
-ln -sfn "$ROOT/desktop/prepdesk-lock" "$BIN/prepdesk-lock"
-ln -sfn "$ROOT/desktop/prepdesk-guard" "$BIN/prepdesk-guard"
-ln -sfn "$ROOT/desktop/end-session.sh" "$BIN/prepdesk-end-session"
-ln -sfn "$ROOT/desktop/show-bypass.sh" "$BIN/prepdesk-show-bypass"
-ln -sfn "$ROOT/desktop/rotate-bypass.sh" "$BIN/prepdesk-rotate-bypass"
+ln -sfn "$ROOT/desktop/prepilo-lock" "$BIN/prepilo-lock"
+ln -sfn "$ROOT/desktop/prepilo-guard" "$BIN/prepilo-guard"
+ln -sfn "$ROOT/desktop/end-session.sh" "$BIN/prepilo-end-session"
+ln -sfn "$ROOT/desktop/show-bypass.sh" "$BIN/prepilo-show-bypass"
+ln -sfn "$ROOT/desktop/rotate-bypass.sh" "$BIN/prepilo-rotate-bypass"
 
 # Restore keybinds on login if a previous lock crashed (runs before lock)
-cat > "$AUTO/prepdesk-restore-keys.desktop" <<EOF
+cat > "$AUTO/prepilo-restore-keys.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=PrepDesk Restore Keys
-Comment=Restore GNOME shortcuts if PrepDesk Lock crashed
+Name=Prepilo Restore Keys
+Comment=Restore GNOME shortcuts if Prepilo Lock crashed
 Exec=/usr/bin/python3 $ROOT/desktop/keybinds.py restore
 Terminal=false
 X-GNOME-Autostart-enabled=true
@@ -34,12 +34,12 @@ X-GNOME-Autostart-Delay=1
 EOF
 
 # Session guard: inhibit logout/shutdown for the whole session
-cat > "$AUTO/prepdesk-guard.desktop" <<EOF
+cat > "$AUTO/prepilo-guard.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=PrepDesk Session Guard
-Comment=Gate logout/shutdown behind PrepDesk questions
-Exec=$BIN/prepdesk-guard
+Name=Prepilo Session Guard
+Comment=Gate logout/shutdown behind Prepilo questions
+Exec=$BIN/prepilo-guard
 Terminal=false
 X-GNOME-Autostart-enabled=true
 X-GNOME-Autostart-Delay=2
@@ -47,12 +47,12 @@ StartupNotify=false
 EOF
 
 # Login lock
-cat > "$AUTO/prepdesk-lock.desktop" <<EOF
+cat > "$AUTO/prepilo-lock.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=PrepDesk Lock
+Name=Prepilo Lock
 Comment=Solve one interview question to unlock your desktop
-Exec=$BIN/prepdesk-lock --gate login
+Exec=$BIN/prepilo-lock --gate login
 Icon=utilities-terminal
 Terminal=false
 X-GNOME-Autostart-enabled=true
@@ -60,37 +60,37 @@ X-GNOME-Autostart-Delay=4
 StartupNotify=false
 EOF
 
-# Gated session-end helpers (hidden from app grid — use prepdesk-end-session or Ctrl+Alt+Delete)
+# Gated session-end helpers (hidden from app grid — use prepilo-end-session or Ctrl+Alt+Delete)
 APPS="$HOME/.local/share/applications"
 mkdir -p "$APPS"
-cat > "$APPS/prepdesk-logout.desktop" <<EOF
+cat > "$APPS/prepilo-logout.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=PrepDesk Logout
-Comment=Solve a PrepDesk question, then log out
-Exec=$BIN/prepdesk-end-session logout
+Name=Prepilo Logout
+Comment=Solve a Prepilo question, then log out
+Exec=$BIN/prepilo-end-session logout
 Icon=system-log-out
 Terminal=false
 Categories=System;
 NoDisplay=true
 EOF
-cat > "$APPS/prepdesk-shutdown.desktop" <<EOF
+cat > "$APPS/prepilo-shutdown.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=PrepDesk Shutdown
-Comment=Solve a PrepDesk question, then power off
-Exec=$BIN/prepdesk-end-session poweroff
+Name=Prepilo Shutdown
+Comment=Solve a Prepilo question, then power off
+Exec=$BIN/prepilo-end-session poweroff
 Icon=system-shutdown
 Terminal=false
 Categories=System;
 NoDisplay=true
 EOF
-cat > "$APPS/prepdesk-reboot.desktop" <<EOF
+cat > "$APPS/prepilo-reboot.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=PrepDesk Reboot
-Comment=Solve a PrepDesk question, then reboot
-Exec=$BIN/prepdesk-end-session reboot
+Name=Prepilo Reboot
+Comment=Solve a Prepilo question, then reboot
+Exec=$BIN/prepilo-end-session reboot
 Icon=system-reboot
 Terminal=false
 Categories=System;
@@ -101,7 +101,7 @@ EOF
 cd "$ROOT"
 node -e "
 const fs=require('fs');const os=require('os');const path=require('path');const {randomUUID}=require('crypto');
-const dir=path.join(os.homedir(),'.config','prepdesk');
+const dir=path.join(os.homedir(),'.config','prepilo');
 fs.mkdirSync(dir,{recursive:true});
 const f=path.join(dir,'bypass.key');
 const cur=fs.existsSync(f)?fs.readFileSync(f,'utf8').trim():'';
@@ -116,15 +116,15 @@ if(!cur || cur.length < 70 || cur.length > 80){
 "
 
 # systemd user units (backup if autostart is flaky)
-cat > "${SYSTEMD_USER}/prepdesk-guard.service" <<EOF
+cat > "${SYSTEMD_USER}/prepilo-guard.service" <<EOF
 [Unit]
-Description=PrepDesk session guard (logout/shutdown gate)
+Description=Prepilo session guard (logout/shutdown gate)
 PartOf=graphical-session.target
 After=graphical-session.target
 
 [Service]
 Type=simple
-ExecStart=$BIN/prepdesk-guard
+ExecStart=$BIN/prepilo-guard
 Restart=on-failure
 RestartSec=3
 
@@ -132,32 +132,32 @@ RestartSec=3
 WantedBy=graphical-session.target
 EOF
 
-cat > "${SYSTEMD_USER}/prepdesk-lock.service" <<EOF
+cat > "${SYSTEMD_USER}/prepilo-lock.service" <<EOF
 [Unit]
-Description=PrepDesk login lock
+Description=Prepilo login lock
 PartOf=graphical-session.target
-After=graphical-session.target prepdesk-guard.service
+After=graphical-session.target prepilo-guard.service
 
 [Service]
 Type=oneshot
-ExecStart=$BIN/prepdesk-lock --gate login
+ExecStart=$BIN/prepilo-lock --gate login
 
 [Install]
 WantedBy=graphical-session.target
 EOF
 
 # Retest timer
-cat > "${SYSTEMD_USER}/prepdesk-retest.service" <<EOF
+cat > "${SYSTEMD_USER}/prepilo-retest.service" <<EOF
 [Unit]
-Description=PrepDesk retest launcher
+Description=Prepilo retest launcher
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 ${ROOT}/desktop/retest-check.py
 EOF
-cat > "${SYSTEMD_USER}/prepdesk-retest.timer" <<EOF
+cat > "${SYSTEMD_USER}/prepilo-retest.timer" <<EOF
 [Unit]
-Description=PrepDesk retest check every 15 minutes
+Description=Prepilo retest check every 15 minutes
 
 [Timer]
 OnBootSec=5min
@@ -169,36 +169,36 @@ WantedBy=timers.target
 EOF
 
 systemctl --user daemon-reload 2>/dev/null || true
-systemctl --user enable prepdesk-guard.service 2>/dev/null || true
-systemctl --user enable prepdesk-lock.service 2>/dev/null || true
-systemctl --user enable --now prepdesk-retest.timer 2>/dev/null || echo "(systemd user timer not enabled — run manually later)"
+systemctl --user enable prepilo-guard.service 2>/dev/null || true
+systemctl --user enable prepilo-lock.service 2>/dev/null || true
+systemctl --user enable --now prepilo-retest.timer 2>/dev/null || echo "(systemd user timer not enabled — run manually later)"
 
-# Point Ctrl+Alt+Del / logout shortcut at PrepDesk gate when possible
+# Point Ctrl+Alt+Del / logout shortcut at Prepilo gate when possible
 if command -v gsettings >/dev/null 2>&1; then
   gsettings set org.gnome.settings-daemon.plugins.media-keys logout "['']" 2>/dev/null || true
   # Custom keybinding: Ctrl+Alt+Delete → gated logout
   gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
-    "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/']" 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/ name "PrepDesk Logout" 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/ command "$BIN/prepdesk-end-session logout" 2>/dev/null || true
-  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/ binding "<Control><Alt>Delete" 2>/dev/null || true
+    "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepilo-logout/']" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepilo-logout/ name "Prepilo Logout" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepilo-logout/ command "$BIN/prepilo-end-session logout" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepilo-logout/ binding "<Control><Alt>Delete" 2>/dev/null || true
 fi
 
 echo
-echo "Installed PrepDesk Lock + Session Guard"
+echo "Installed Prepilo Lock + Session Guard"
 echo "  Login lock:     autostart + systemd (graphical-session)"
 echo "  Session guard:  blocks logout/suspend/shutdown until gated"
-echo "  Commands:       prepdesk-lock | prepdesk-guard | prepdesk-end-session"
-echo "  Apps menu:      PrepDesk Logout / Shutdown / Reboot"
-echo "  Bypass:         prepdesk-show-bypass   (TTY / Ctrl+Alt+F3 if stuck)"
-echo "  Key file:       ~/.config/prepdesk/bypass.key"
+echo "  Commands:       prepilo-lock | prepilo-guard | prepilo-end-session"
+echo "  Apps menu:      Prepilo Logout / Shutdown / Reboot"
+echo "  Bypass:         prepilo-show-bypass   (TTY / Ctrl+Alt+F3 if stuck)"
+echo "  Key file:       ~/.config/prepilo/bypass.key"
 echo
 echo "IMPORTANT: write down the bypass key before next login:"
-echo "  prepdesk-show-bypass"
+echo "  prepilo-show-bypass"
 echo
 echo "Hard power-hold still works as last resort — not blocked at firmware level."
 echo
 echo "Apply now (this session):"
-echo "  prepdesk-guard &"
-echo "  prepdesk-lock"
+echo "  prepilo-guard &"
+echo "  prepilo-lock"
 echo "Uninstall: ${ROOT}/desktop/uninstall-lock.sh"

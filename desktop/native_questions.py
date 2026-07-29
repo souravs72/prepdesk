@@ -10,8 +10,9 @@ from pathlib import Path
 from typing import Any
 
 from native_bank import builders_for, template_count
+from paths import CONFIG, ensure_config
 
-CONFIG = Path.home() / ".config" / "prepdesk"
+ensure_config()
 SEEN_FILE = CONFIG / "native-seen.json"
 
 

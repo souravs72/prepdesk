@@ -1,4 +1,4 @@
-# PrepDesk
+# Prepilo
 
 Premium desktop interview preparation platform.
 
@@ -9,37 +9,37 @@ Premium desktop interview preparation platform.
 
 ### Option A — AppImage (recommended)
 
-1. Download `PrepDesk-*-linux-x86_64.AppImage` from [Releases](https://github.com/souravs72/prepdesk/releases).
+1. Download `Prepilo-*-linux-x86_64.AppImage` from [Releases](https://github.com/souravs72/prepilo/releases).
 2. Make it executable and run:
 
 ```bash
-chmod +x PrepDesk-*-linux-x86_64.AppImage
-./PrepDesk-*-linux-x86_64.AppImage
+chmod +x Prepilo-*-linux-x86_64.AppImage
+./Prepilo-*-linux-x86_64.AppImage
 ```
 
 Or install a launcher:
 
 ```bash
-./scripts/install-from-appimage.sh ./PrepDesk-*-linux-x86_64.AppImage
-prepdesk
+./scripts/install-from-appimage.sh ./Prepilo-*-linux-x86_64.AppImage
+prepilo
 ```
 
 ### Option B — `.deb`
 
 ```bash
-sudo apt install ./prepdesk_*_amd64.deb
+sudo apt install ./prepilo_*_amd64.deb
 ```
 
 ### Option C — from source (developers)
 
 ```bash
-git clone https://github.com/souravs72/prepdesk.git
-cd prepdesk
+git clone https://github.com/souravs72/prepilo.git
+cd prepilo
 npm install
 npm run build
 npm run install-app    # study app launcher
 npm run install-lock   # optional GTK login/logout lock
-prepdesk
+prepilo
 ```
 
 ## Build distributables (maintainers)
@@ -67,13 +67,13 @@ git push origin v1.0.0
 
 ```bash
 npm run install-lock
-prepdesk-show-bypass   # write this down
-prepdesk-lock
+prepilo-show-bypass   # write this down
+prepilo-lock
 ```
 
-Needs: `python3-gi`, GTK 3, `gir1.2-webkit2-4.1`. Bypass key lives in `~/.config/prepdesk/bypass.key` (local only — never commit).
+Needs: `python3-gi`, GTK 3, `gir1.2-webkit2-4.1`. Bypass key lives in `~/.config/prepilo/bypass.key` (local only — never commit).
 
-Stuck? `Ctrl+Alt+F3` → `prepdesk-show-bypass` or `desktop/uninstall-lock.sh`.
+Stuck? `Ctrl+Alt+F3` → `prepilo-show-bypass` or `desktop/uninstall-lock.sh`.
 
 OpenAI (optional) from `~/.config/daily-work-digest/.env` + `config.yaml`.
 
@@ -92,7 +92,7 @@ release/      Built AppImage/deb (gitignored)
 | Keep local only | Commit to GitHub |
 |-----------------|------------------|
 | `node_modules/`, `dist/`, `release/` | Source under `src/`, `electron/`, `desktop/`, `server/` |
-| `~/.config/prepdesk/*` (bypass, analytics) | `README`, workflows, icons |
+| `~/.config/prepilo/*` (bypass, analytics) | `README`, workflows, icons |
 | API keys / `.env` | Tests, package manifests |
 
 ## Notes

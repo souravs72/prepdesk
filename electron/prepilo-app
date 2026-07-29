@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch PrepDesk study UI in Electron (lock remains GTK via prepdesk-lock).
+# Launch Prepilo study UI in Electron (lock remains GTK via prepilo-lock).
 set -euo pipefail
 SOURCE="${BASH_SOURCE[0]}"
 while [[ -L "$SOURCE" ]]; do
@@ -15,12 +15,12 @@ if [[ ! -d node_modules/electron ]]; then
   npm install
 fi
 
-# Default: production load of dist/. Use PREPDESK_ELECTRON_PROD=0 for Vite URL.
-if [[ -z "${PREPDESK_ELECTRON_PROD:-}" ]]; then
+# Default: production load of dist/. Use PREPILO_ELECTRON_PROD=0 for Vite URL.
+if [[ -z "${PREPILO_ELECTRON_PROD:-}" ]]; then
   if [[ -f "$ROOT/dist/index.html" ]]; then
-    export PREPDESK_ELECTRON_PROD=1
+    export PREPILO_ELECTRON_PROD=1
   else
-    export PREPDESK_ELECTRON_PROD=0
+    export PREPILO_ELECTRON_PROD=0
   fi
 fi
 

@@ -39,7 +39,7 @@ function NoPasteInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
 
 function readToken(): string {
   const q = new URLSearchParams(window.location.search)
-  return q.get('token') || sessionStorage.getItem('prepdesk-lock-token') || ''
+  return q.get('token') || sessionStorage.getItem('prepilo-lock-token') || ''
 }
 
 export function LockPage() {
@@ -65,7 +65,7 @@ export function LockPage() {
             : 'Unlock'
 
   useEffect(() => {
-    if (token) sessionStorage.setItem('prepdesk-lock-token', token)
+    if (token) sessionStorage.setItem('prepilo-lock-token', token)
   }, [token])
 
   async function unlockSolved() {
@@ -74,12 +74,12 @@ export function LockPage() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Prepdesk-Token': token,
+        'X-Prepilo-Token': token,
       },
       body: JSON.stringify({ reason: 'solved', token }),
     })
     if (!res.ok) {
-      setErrorMsg('Unlock failed — relaunch with prepdesk-lock.')
+      setErrorMsg('Unlock failed — relaunch with prepilo-lock.')
       return
     }
     await fetch(`${API}/retest/clear`, { method: 'POST' }).catch(() => {})
@@ -107,7 +107,7 @@ export function LockPage() {
       <div className="mx-auto max-w-3xl space-y-5">
         <header className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            PrepDesk
+            Prepilo
           </p>
           <h1 className="text-2xl font-semibold tracking-tight">{gateTitle}</h1>
           {unlockedMsg && <p className="text-sm text-[var(--color-ok)]">{unlockedMsg}</p>}

@@ -5,12 +5,12 @@ ACTION="${1:-logout}"
 case "$ACTION" in
   logout|poweroff|shutdown|reboot|suspend) ;;
   *)
-    echo "Usage: prepdesk-end-session [logout|poweroff|reboot|suspend]" >&2
+    echo "Usage: prepilo-end-session [logout|poweroff|reboot|suspend]" >&2
     exit 2
     ;;
 esac
 
-DIR="${HOME}/.config/prepdesk"
+DIR="${HOME}/.config/prepilo"
 mkdir -p "$DIR"
 printf '%s\n' "{\"action\":\"$ACTION\",\"at\":\"$(date -Iseconds)\"}" > "$DIR/pending-session-end.json"
 
@@ -23,11 +23,11 @@ if [[ -f "$DIR/session-guard.pid" ]]; then
 fi
 
 # No guard — run lock, then perform the action if cleared.
-LOCK="${HOME}/.local/bin/prepdesk-lock"
+LOCK="${HOME}/.local/bin/prepilo-lock"
 if [[ ! -x "$LOCK" ]]; then
-  LOCK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/prepdesk-lock"
+  LOCK="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/prepilo-lock"
 fi
-PREPDESK_GATE="$ACTION" "$LOCK" --gate "$ACTION" || true
+PREPILO_GATE="$ACTION" "$LOCK" --gate "$ACTION" || true
 if [[ -f "$DIR/gate-cleared.json" ]]; then
   rm -f "$DIR/gate-cleared.json"
   case "$ACTION" in

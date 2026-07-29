@@ -49,7 +49,7 @@ export function Shell() {
             <Command size={18} />
           </div>
           <div>
-            <div className="text-sm font-semibold tracking-tight">PrepDesk</div>
+            <div className="text-sm font-semibold tracking-tight">Prepilo</div>
             <div className="text-[11px] text-[var(--color-muted)]">Interview OS</div>
           </div>
         </div>

@@ -111,7 +111,7 @@ const FAMILIES: CodingFamily[] = [
   {
     topic: 'strings',
     build: (rng) => {
-      const s = rng.pick(['interview', 'prepdesk', 'algorithm', 'station', 'monaco'])
+      const s = rng.pick(['interview', 'prepilo', 'algorithm', 'station', 'monaco'])
       const freq: Record<string, number> = {}
       for (const ch of s) freq[ch] = (freq[ch] ?? 0) + 1
       let ans = -1

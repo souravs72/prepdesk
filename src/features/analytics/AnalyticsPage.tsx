@@ -36,7 +36,7 @@ export function AnalyticsPage() {
         </p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight">Know your edges.</h1>
         <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Persisted under ~/.config/prepdesk/analytics.json. Below 80% rolling accuracy schedules a
+          Persisted under ~/.config/prepilo/analytics.json. Below 80% rolling accuracy schedules a
           retest in ~4.5 hours.
         </p>
       </header>

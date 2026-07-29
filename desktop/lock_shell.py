@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PrepDesk Lock — fullscreen GTK shell embedding the React Lock UI (same look as the browser)."""
+"""Prepilo Lock — fullscreen GTK shell embedding the React Lock UI (same look as the browser)."""
 
 from __future__ import annotations
 
@@ -17,8 +17,9 @@ from pathlib import Path
 from urllib.parse import quote
 
 # Avoid Wayland Error 11 on seat/compositor chatter — run under XWayland.
-_backend = os.environ.get("PREPDESK_GDK_BACKEND") or "x11"
-if os.environ.get("PREPDESK_ALLOW_WAYLAND", "").strip() not in {"1", "true", "yes"}:
+_backend = os.environ.get("PREPILO_GDK_BACKEND") or os.environ.get("PREPDESK_GDK_BACKEND") or "x11"
+_allow_wl = os.environ.get("PREPILO_ALLOW_WAYLAND") or os.environ.get("PREPDESK_ALLOW_WAYLAND") or ""
+if _allow_wl.strip() not in {"1", "true", "yes"}:
     os.environ["GDK_BACKEND"] = _backend
 
 import gi
@@ -29,16 +30,18 @@ gi.require_version("WebKit2", "4.1")
 from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 API = "http://127.0.0.1:4789"
+ROOT = Path(__file__).resolve().parents[1]
 # Prefer built UI from the local API (no Vite). Fall back to Vite for dev.
-WEB_BASE = os.environ.get("PREPDESK_URL") or (
+WEB_BASE = os.environ.get("PREPILO_URL") or os.environ.get("PREPDESK_URL") or (
     "http://127.0.0.1:4789/lock"
     if (ROOT / "dist" / "index.html").exists()
     else "http://127.0.0.1:5173/lock"
 )
-ROOT = Path(__file__).resolve().parents[1]
-CONFIG = Path.home() / ".config" / "prepdesk"
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import keybinds  # noqa: E402
+from paths import CONFIG, ensure_config  # noqa: E402
+
+ensure_config()
 
 _restored = False
 
@@ -110,7 +113,7 @@ def ensure_services() -> None:
             start_new_session=True,
         )
         if not wait_for(f"{API}/health", 90):
-            print("PrepDesk API failed to start", file=sys.stderr)
+            print("Prepilo API failed to start", file=sys.stderr)
             sys.exit(1)
 
     # UI: prefer dist via API; otherwise start Vite for /lock
@@ -132,7 +135,7 @@ def ensure_services() -> None:
         start_new_session=True,
     )
     if not wait_for("http://127.0.0.1:5173/", 90):
-        print("PrepDesk UI failed to start (build with npm run build, or npm run dev:web)", file=sys.stderr)
+        print("Prepilo UI failed to start (build with npm run build, or npm run dev:web)", file=sys.stderr)
         sys.exit(1)
 
 
@@ -166,7 +169,7 @@ def display_is_wayland() -> bool:
 
 class LockWindow(Gtk.Window):
     def __init__(self, token: str, gate: str = "login"):
-        super().__init__(title="PrepDesk Lock")
+        super().__init__(title="Prepilo Lock")
         self.token = token
         self.gate = gate
         self._solved = False
@@ -292,7 +295,7 @@ class LockWindow(Gtk.Window):
         mark_gate_cleared(self.gate, reason)
         safe_restore()
         self._ungrab()
-        print(f"PrepDesk unlocked ({reason}) — closing lock window.", flush=True)
+        print(f"Prepilo unlocked ({reason}) — closing lock window.", flush=True)
         # Brief delay so the React “unlocked” banner is visible.
         GLib.timeout_add(1200, lambda: (Gtk.main_quit() or False))
 
@@ -316,7 +319,7 @@ class LockWindow(Gtk.Window):
 
 
 def _parse_gate(argv: list[str]) -> str:
-    gate = os.environ.get("PREPDESK_GATE", "login")
+    gate = os.environ.get("PREPILO_GATE") or os.environ.get("PREPDESK_GATE", "login")
     if "--gate" in argv:
         i = argv.index("--gate")
         if i + 1 < len(argv):
@@ -350,7 +353,7 @@ def main(argv: list[str] | None = None) -> int:
 
     instance = _single_instance()
     if instance is None:
-        print("PrepDesk lock already running", file=sys.stderr)
+        print("Prepilo lock already running", file=sys.stderr)
         return 0
 
     if (CONFIG / "keybinds-backup.json").exists():
@@ -361,7 +364,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         armed = api_json("POST", "/lock/arm", {"source": f"webkit-shell:{gate}"}, timeout=3.0)
     except urllib.error.URLError:
-        print("Cannot reach PrepDesk API on :4789", file=sys.stderr)
+        print("Cannot reach Prepilo API on :4789", file=sys.stderr)
         return 1
 
     token = armed.get("token") or ""
@@ -373,7 +376,7 @@ def main(argv: list[str] | None = None) -> int:
     atexit.register(safe_restore)
 
     print(
-        f"PrepDesk lock starting (gate={gate}, UI=React/WebKit, GDK_BACKEND={os.environ.get('GDK_BACKEND')})",
+        f"Prepilo lock starting (gate={gate}, UI=React/WebKit, GDK_BACKEND={os.environ.get('GDK_BACKEND')})",
         flush=True,
     )
 

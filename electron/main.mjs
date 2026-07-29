@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * PrepDesk Electron shell — study UI only.
- * Desktop lock stays on GTK (prepdesk-lock); do not replace it with Electron.
+ * Prepilo Electron shell — study UI only.
+ * Desktop lock stays on GTK (prepilo-lock); do not replace it with Electron.
  */
 import { app, BrowserWindow, shell } from 'electron'
 import { spawn } from 'node:child_process'
@@ -14,7 +14,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '..')
 const API = 'http://127.0.0.1:4789'
 const WEB_DEV = 'http://127.0.0.1:5173'
-const isDev = !app.isPackaged && process.env.PREPDESK_ELECTRON_PROD !== '1'
+const isDev =
+  !app.isPackaged &&
+  process.env.PREPILO_ELECTRON_PROD !== '1' &&
+  process.env.PREPDESK_ELECTRON_PROD !== '1'
 
 let mainWindow = null
 let runnerProc = null
@@ -62,12 +65,16 @@ async function ensureRunner() {
 
   const runner = resolveRunner()
   if (!runner) {
-    console.error('PrepDesk runner.mjs not found')
+    console.error('Prepilo runner.mjs not found')
     return
   }
 
   const cwd = path.dirname(path.dirname(runner))
-  if (app.isPackaged || process.env.PREPDESK_ELECTRON_PROD === '1') {
+  if (
+    app.isPackaged ||
+    process.env.PREPILO_ELECTRON_PROD === '1' ||
+    process.env.PREPDESK_ELECTRON_PROD === '1'
+  ) {
     runnerProc = spawn(process.execPath, [runner], {
       cwd,
       stdio: 'ignore',
@@ -84,7 +91,7 @@ async function ensureRunner() {
   }
   runnerProc.unref()
   const ready = await waitHttp(`${API}/health`, 90, 300)
-  if (!ready) console.error('PrepDesk runner failed to start on :4789')
+  if (!ready) console.error('Prepilo runner failed to start on :4789')
 }
 
 function createWindow() {
@@ -93,7 +100,7 @@ function createWindow() {
     height: 860,
     minWidth: 960,
     minHeight: 640,
-    title: 'PrepDesk',
+    title: 'Prepilo',
     icon: path.join(__dirname, 'icons', 'icon.png'),
     backgroundColor: '#07080a',
     autoHideMenuBar: true,
@@ -116,7 +123,7 @@ function createWindow() {
     const indexHtml = resolveDistIndex()
     if (!indexHtml) {
       void mainWindow.loadURL(
-        `data:text/html,<h1 style="font-family:sans-serif;padding:2rem;color:#e8eaef;background:#07080a">PrepDesk UI missing — rebuild with <code>npm run dist</code></h1>`,
+        `data:text/html,<h1 style="font-family:sans-serif;padding:2rem;color:#e8eaef;background:#07080a">Prepilo UI missing — rebuild with <code>npm run dist</code></h1>`,
       )
     } else {
       void mainWindow.loadFile(indexHtml)

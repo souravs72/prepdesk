@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PrepDesk Native Lock — pure GTK desktop lockdown (no browser / WebKit UI)."""
+"""Prepilo Native Lock — pure GTK desktop lockdown (no browser / WebKit UI)."""
 
 from __future__ import annotations
 
@@ -18,8 +18,9 @@ from pathlib import Path
 
 # Native Wayland seat.grab triggers: Error 11 dispatching to Wayland display.
 # Force XWayland before Gdk initializes unless user opts out.
-_backend = os.environ.get("PREPDESK_GDK_BACKEND") or "x11"
-if os.environ.get("PREPDESK_ALLOW_WAYLAND", "").strip() not in {"1", "true", "yes"}:
+_backend = os.environ.get("PREPILO_GDK_BACKEND") or os.environ.get("PREPDESK_GDK_BACKEND") or "x11"
+_allow_wl = os.environ.get("PREPILO_ALLOW_WAYLAND") or os.environ.get("PREPDESK_ALLOW_WAYLAND") or ""
+if _allow_wl.strip() not in {"1", "true", "yes"}:
     os.environ["GDK_BACKEND"] = _backend
 
 import gi
@@ -32,9 +33,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import keybinds  # noqa: E402
 from native_questions import grade_answer, next_lock_question  # noqa: E402
+from paths import CONFIG, ensure_config  # noqa: E402
+
+ensure_config()
 
 API = "http://127.0.0.1:4789"
-CONFIG = Path.home() / ".config" / "prepdesk"
 DIGEST_ENV = Path.home() / ".config" / "daily-work-digest" / ".env"
 DIGEST_CFG = Path.home() / ".config" / "daily-work-digest" / "config.yaml"
 
@@ -58,7 +61,11 @@ def display_is_wayland() -> bool:
 
 def seat_grab_supported() -> bool:
     """Exclusive seat grab is unsafe/unstable on native Wayland (Error 11)."""
-    if os.environ.get("PREPDESK_FORCE_GRAB", "").strip() in {"1", "true", "yes"}:
+    if (os.environ.get("PREPILO_FORCE_GRAB") or os.environ.get("PREPDESK_FORCE_GRAB") or "").strip() in {
+        "1",
+        "true",
+        "yes",
+    }:
         return True
     return not display_is_wayland()
 
@@ -99,7 +106,7 @@ def api_json(
     data = None if payload is None else json.dumps(payload).encode()
     headers = {"Content-Type": "application/json"}
     if token:
-        headers["X-Prepdesk-Token"] = token
+        headers["X-Prepilo-Token"] = token
     req = urllib.request.Request(
         f"{API}{path}",
         data=data,
@@ -151,7 +158,7 @@ def ensure_runner() -> None:
         env=os.environ.copy(),
     )
     if not wait_api():
-        print("PrepDesk API slow/unavailable — continuing with local grading", file=sys.stderr)
+        print("Prepilo API slow/unavailable — continuing with local grading", file=sys.stderr)
 
 
 def bypass_ok(key: str) -> bool:
@@ -242,7 +249,7 @@ class NoPasteEntry(Gtk.Entry):
 
 class NativeLockApp(Gtk.Window):
     def __init__(self, token: str, gate: str = "login"):
-        super().__init__(title="PrepDesk Native Lock")
+        super().__init__(title="Prepilo Native Lock")
         self.token = token
         self.gate = gate if gate in {"login", "logout", "poweroff", "shutdown", "reboot", "suspend"} else "login"
         self.question = next_lock_question()
@@ -280,7 +287,7 @@ class NativeLockApp(Gtk.Window):
             "shutdown": "SHUTDOWN GATE — solve to power off",
             "reboot": "REBOOT GATE — solve to reboot",
             "suspend": "SUSPEND GATE — solve to suspend",
-        }.get(self.gate, "PREPDESK NATIVE LOCK")
+        }.get(self.gate, "PREPILO NATIVE LOCK")
         brand = Gtk.Label(label=gate_note)
         brand.get_style_context().add_class("label-accent")
         brand.set_xalign(0)
@@ -779,7 +786,7 @@ class NativeLockApp(Gtk.Window):
 
 
 def _parse_gate(argv: list[str]) -> str:
-    gate = os.environ.get("PREPDESK_GATE", "login")
+    gate = os.environ.get("PREPILO_GATE") or os.environ.get("PREPDESK_GATE", "login")
     if "--gate" in argv:
         i = argv.index("--gate")
         if i + 1 < len(argv):
@@ -812,7 +819,7 @@ def main(argv: list[str] | None = None) -> int:
 
     instance = _single_instance()
     if instance is None:
-        print("PrepDesk lock already running", file=sys.stderr)
+        print("Prepilo lock already running", file=sys.stderr)
         return 0
 
     backup = CONFIG / "keybinds-backup.json"
@@ -831,7 +838,7 @@ def main(argv: list[str] | None = None) -> int:
     atexit.register(safe_restore)
 
     backend = os.environ.get("GDK_BACKEND", "auto")
-    print(f"PrepDesk lock starting (gate={gate}, GDK_BACKEND={backend})", flush=True)
+    print(f"Prepilo lock starting (gate={gate}, GDK_BACKEND={backend})", flush=True)
 
     win = NativeLockApp(token, gate=gate)
     win.show_all()

@@ -1,4 +1,4 @@
-"""Combinatorial question templates for PrepDesk native lock."""
+"""Combinatorial question templates for Prepilo native lock."""
 
 from __future__ import annotations
 

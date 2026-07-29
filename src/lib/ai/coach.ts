@@ -35,7 +35,7 @@ export function reviewCodeStub(code: string, q: Question): string[] {
 
 export async function aiAssist(prompt: string, q: Question): Promise<string> {
   // Optional remote model — falls back to local coach
-  const key = localStorage.getItem('prepdesk-openai-key')
+  const key = localStorage.getItem('prepilo-openai-key')
   if (!key) {
     return `Local coach:\n${getHints(q, 2)}\n\n(Add an API key in Settings for richer LLM help.)\n\nYou asked: ${prompt.slice(0, 200)}`
   }

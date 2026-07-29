@@ -1,18 +1,18 @@
 {
-  "name": "prepdesk",
+  "name": "prepilo",
   "private": false,
   "version": "1.0.0",
-  "description": "PrepDesk — desktop interview prep (Electron study app + GTK lock)",
+  "description": "Prepilo — desktop interview prep (Electron study app + GTK lock)",
   "author": {
-    "name": "PrepDesk",
-    "email": "prepdesk@users.noreply.github.com"
+    "name": "Prepilo",
+    "email": "prepilo@users.noreply.github.com"
   },
-  "desktopName": "prepdesk.desktop",
+  "desktopName": "prepilo.desktop",
   "license": "MIT",
-  "homepage": "https://github.com/souravs72/prepdesk",
+  "homepage": "https://github.com/souravs72/prepilo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/souravs72/prepdesk.git"
+    "url": "https://github.com/souravs72/prepilo.git"
   },
   "type": "module",
   "main": "electron/main.mjs",
@@ -22,9 +22,9 @@
     "runner": "node server/runner.mjs",
     "electron": "electron electron/main.mjs",
     "electron:dev": "concurrently -k -n web,runner,app -c teal,yellow,magenta \"vite\" \"node server/runner.mjs\" \"wait-on http://127.0.0.1:5173 http://127.0.0.1:4789/health && electron electron/main.mjs\"",
-    "electron:prod": "npm run build && PREPDESK_ELECTRON_PROD=1 electron electron/main.mjs",
-    "app": "electron/prepdesk-app",
-    "lock": "desktop/prepdesk-lock",
+    "electron:prod": "npm run build && PREPILO_ELECTRON_PROD=1 electron electron/main.mjs",
+    "app": "electron/prepilo-app",
+    "lock": "desktop/prepilo-lock",
     "show-bypass": "desktop/show-bypass.sh",
     "rotate-bypass": "desktop/rotate-bypass.sh",
     "install-lock": "desktop/install-lock.sh",
@@ -74,9 +74,9 @@
     "wait-on": "^8.0.5"
   },
   "build": {
-    "appId": "com.prepdesk.app",
-    "productName": "PrepDesk",
-    "copyright": "Copyright © PrepDesk",
+    "appId": "com.prepilo.app",
+    "productName": "Prepilo",
+    "copyright": "Copyright © Prepilo",
     "directories": {
       "output": "release",
       "buildResources": "electron/icons"
@@ -109,14 +109,14 @@
       "category": "Education",
       "icon": "electron/icons/icon.png",
       "synopsis": "Interview prep study desk with optional GTK session lock",
-      "description": "PrepDesk helps you practice DSA, system design, OS, and DBMS with daily sets, mocks, and analytics. Includes an optional Ubuntu GTK lock that gates login/logout behind a question."
+      "description": "Prepilo helps you practice DSA, system design, OS, and DBMS with daily sets, mocks, and analytics. Includes an optional Ubuntu GTK lock that gates login/logout behind a question."
     },
     "appImage": {
-      "artifactName": "PrepDesk-${version}-linux-x86_64.AppImage"
+      "artifactName": "Prepilo-${version}-linux-x86_64.AppImage"
     },
     "deb": {
-      "artifactName": "prepdesk_${version}_amd64.deb",
-      "maintainer": "PrepDesk <prepdesk@users.noreply.github.com>",
+      "artifactName": "prepilo_${version}_amd64.deb",
+      "maintainer": "Prepilo <prepilo@users.noreply.github.com>",
       "depends": [
         "libgtk-3-0",
         "libnotify4",

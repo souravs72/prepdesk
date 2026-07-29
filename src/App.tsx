@@ -10,7 +10,7 @@ import { LockPage } from './features/lock/LockPage'
 
 declare global {
   interface Window {
-    prepdesk?: { isElectron?: boolean; shell?: string }
+    prepilo?: { isElectron?: boolean; shell?: string }
   }
 }
 

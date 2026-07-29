@@ -75,7 +75,7 @@ export function generateDailySet(
   count = DAILY_COUNT,
   ctx: GenContext = {},
 ): Question[] {
-  const rng = new SeededRng(`prepdesk-daily:${day}`)
+  const rng = new SeededRng(`prepilo-daily:${day}`)
   const questions: Question[] = []
   const kinds = [
     'mcq',

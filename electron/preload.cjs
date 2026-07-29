@@ -1,6 +1,6 @@
 const { contextBridge } = require('electron')
 
-contextBridge.exposeInMainWorld('prepdesk', {
+contextBridge.exposeInMainWorld('prepilo', {
   isElectron: true,
   shell: 'electron',
 })
