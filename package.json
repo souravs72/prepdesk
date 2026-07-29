@@ -1,7 +1,7 @@
 {
   "name": "prepilo",
   "private": false,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Prepilo — desktop interview prep (Electron study app + GTK lock)",
   "author": {
     "name": "Prepilo",
@@ -29,6 +29,8 @@
     "rotate-bypass": "desktop/rotate-bypass.sh",
     "install-lock": "desktop/install-lock.sh",
     "install-app": "electron/install-app.sh",
+    "install-linux": "scripts/install-linux.sh",
+    "uninstall-linux": "scripts/uninstall-linux.sh",
     "build": "tsc -b && vite build",
     "dist": "npm run build && electron-builder --linux AppImage deb --publish never",
     "dist:dir": "npm run build && electron-builder --linux dir --publish never",
@@ -63,7 +65,7 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.3",
     "concurrently": "^10.0.4",
-    "electron": "^37.2.0",
+    "electron": "^37.10.3",
     "electron-builder": "^26.15.3",
     "jsdom": "^30.0.0",
     "oxlint": "^1.71.0",

@@ -10,18 +10,73 @@ done
 ROOT="$(cd "$(dirname "$SOURCE")/.." && pwd)"
 cd "$ROOT"
 
-if [[ ! -d node_modules/electron ]]; then
-  echo "Installing dependencies…"
-  npm install
-fi
-
-# Default: production load of dist/. Use PREPILO_ELECTRON_PROD=0 for Vite URL.
-if [[ -z "${PREPILO_ELECTRON_PROD:-}" ]]; then
-  if [[ -f "$ROOT/dist/index.html" ]]; then
-    export PREPILO_ELECTRON_PROD=1
-  else
-    export PREPILO_ELECTRON_PROD=0
+notify() {
+  local msg="$1"
+  echo "$msg" >&2
+  if command -v notify-send >/dev/null 2>&1; then
+    notify-send -a Prepilo "Prepilo" "$msg" || true
+  elif command -v zenity >/dev/null 2>&1; then
+    zenity --error --title=Prepilo --text="$msg" 2>/dev/null || true
   fi
+}
+
+# Prefer packaged AppImage if present (most reliable for end users / menu clicks)
+APPIMAGE="${HOME}/.local/opt/prepilo/Prepilo.AppImage"
+if [[ -x "$APPIMAGE" ]]; then
+  exec env -u ELECTRON_RUN_AS_NODE -u ELECTRON_NO_ATTACH_CONSOLE "$APPIMAGE" "$@"
 fi
 
-exec npx electron "$ROOT/electron/main.mjs" "$@"
+# Cursor / some shells set ELECTRON_RUN_AS_NODE which breaks Electron apps.
+unset ELECTRON_RUN_AS_NODE ELECTRON_NO_ATTACH_CONSOLE || true
+
+ELECTRON_BIN="$ROOT/node_modules/electron/dist/electron"
+if [[ ! -x "$ELECTRON_BIN" ]]; then
+  echo "Repairing Electron binary…"
+  if [[ ! -d "$ROOT/node_modules/electron" ]]; then
+    npm install electron --foreground-scripts || {
+      notify "Could not install Electron. Run: cd $ROOT && npm install electron --foreground-scripts"
+      exit 1
+    }
+  fi
+  # Extract from local cache if postinstall left an incomplete dist/
+  if [[ ! -x "$ELECTRON_BIN" ]]; then
+    ZIP="$(find "${HOME}/.cache/electron" -name 'electron-v*-linux-x64.zip' 2>/dev/null | head -1 || true)"
+    if [[ -n "$ZIP" && -f "$ZIP" ]]; then
+      rm -rf "$ROOT/node_modules/electron/dist"
+      mkdir -p "$ROOT/node_modules/electron/dist"
+      python3 - "$ZIP" "$ROOT/node_modules/electron/dist" <<'PY'
+import sys, zipfile
+zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])
+PY
+      echo electron > "$ROOT/node_modules/electron/path.txt"
+    else
+      (cd "$ROOT/node_modules/electron" && node install.js) || true
+    fi
+  fi
+  chmod +x "$ELECTRON_BIN" 2>/dev/null || true
+fi
+
+if [[ ! -x "$ELECTRON_BIN" ]]; then
+  notify "Electron is missing. Run in a terminal:\ncd $ROOT && rm -rf node_modules/electron && npm install electron --foreground-scripts"
+  exit 1
+fi
+
+if [[ ! -f "$ROOT/dist/index.html" ]]; then
+  echo "Building web UI…"
+  npm run build || {
+    notify "Build failed. Run: npm run build"
+    exit 1
+  }
+fi
+
+export PREPILO_ELECTRON_PROD="${PREPILO_ELECTRON_PROD:-1}"
+
+EXTRA_ARGS=()
+# Without root-owned setuid chrome-sandbox, Electron refuses to start.
+if [[ ! -u "$ROOT/node_modules/electron/dist/chrome-sandbox" ]]; then
+  EXTRA_ARGS+=(--no-sandbox)
+fi
+# Avoid GPU process crashes on some Linux desktops
+EXTRA_ARGS+=(--disable-gpu --disable-gpu-sandbox)
+
+exec "$ELECTRON_BIN" "${EXTRA_ARGS[@]}" "$ROOT/electron/main.mjs" "$@"

@@ -7,20 +7,20 @@ Premium desktop interview preparation platform.
 
 ## Install (end users)
 
-### Option A — AppImage (recommended)
+### One-liner (recommended)
 
-1. Download `Prepilo-*-linux-x86_64.AppImage` from [Releases](https://github.com/souravs72/prepilo/releases).
-2. Make it executable and run:
+```bash
+curl -fsSL https://raw.githubusercontent.com/souravs72/prepilo/main/scripts/install-linux.sh | bash -s -- --download
+prepilo
+```
+
+This downloads the latest GitHub Release AppImage, **extracts it** (works without FUSE), installs icons + a desktop launcher, and wires the `prepilo` command.
+
+### Option A — AppImage file you already downloaded
 
 ```bash
 chmod +x Prepilo-*-linux-x86_64.AppImage
-./Prepilo-*-linux-x86_64.AppImage
-```
-
-Or install a launcher:
-
-```bash
-./scripts/install-from-appimage.sh ./Prepilo-*-linux-x86_64.AppImage
+./scripts/install-linux.sh ./Prepilo-*-linux-x86_64.AppImage
 prepilo
 ```
 
@@ -37,10 +37,12 @@ git clone https://github.com/souravs72/prepilo.git
 cd prepilo
 npm install
 npm run build
-npm run install-app    # study app launcher
+npm run install-app    # study app launcher (dev)
 npm run install-lock   # optional GTK login/logout lock
 prepilo
 ```
+
+Uninstall user install: `scripts/uninstall-linux.sh`
 
 ## Build distributables (maintainers)
 
@@ -52,8 +54,8 @@ npm run dist           # → release/*.AppImage and release/*.deb
 Tag a version to publish via GitHub Actions:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.1.1
+git push origin v1.1.1
 ```
 
 ## Features
