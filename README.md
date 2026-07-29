@@ -1,6 +1,12 @@
 # Prepilo
 
-Premium desktop interview preparation platform.
+Desktop interview preparation platform.
+
+<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/4d694945-ca0b-4cba-bf57-6fcbd99e21ee" />
+<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/cfd686ac-ddf8-424e-8772-0fb193ceac74" />
+<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/fb7c3627-1c59-4cd3-9134-25be53346c9c" />
+<img width="1928" height="972" alt="image" src="https://github.com/user-attachments/assets/70fe12f4-bb3e-43a0-b949-79c3efd18076" />
+
 
 - **Study app:** Electron desktop window  
 - **Session lock:** GTK + WebKit (Ubuntu/GNOME), optional  
