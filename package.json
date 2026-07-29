@@ -3,7 +3,11 @@
   "private": false,
   "version": "1.0.0",
   "description": "PrepDesk — desktop interview prep (Electron study app + GTK lock)",
-  "author": "PrepDesk",
+  "author": {
+    "name": "PrepDesk",
+    "email": "prepdesk@users.noreply.github.com"
+  },
+  "desktopName": "prepdesk.desktop",
   "license": "MIT",
   "homepage": "https://github.com/souravs72/prepdesk",
   "repository": {
@@ -26,8 +30,8 @@
     "install-lock": "desktop/install-lock.sh",
     "install-app": "electron/install-app.sh",
     "build": "tsc -b && vite build",
-    "dist": "npm run build && electron-builder --linux AppImage deb",
-    "dist:dir": "npm run build && electron-builder --linux dir",
+    "dist": "npm run build && electron-builder --linux AppImage deb --publish never",
+    "dist:dir": "npm run build && electron-builder --linux dir --publish never",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "oxlint"
@@ -105,18 +109,14 @@
       "category": "Education",
       "icon": "electron/icons/icon.png",
       "synopsis": "Interview prep study desk with optional GTK session lock",
-      "description": "PrepDesk helps you practice DSA, system design, OS, and DBMS with daily sets, mocks, and analytics. Includes an optional Ubuntu GTK lock that gates login/logout behind a question.",
-      "desktop": {
-        "Name": "PrepDesk",
-        "Comment": "Interview prep study desk",
-        "Categories": "Education;Development;"
-      }
+      "description": "PrepDesk helps you practice DSA, system design, OS, and DBMS with daily sets, mocks, and analytics. Includes an optional Ubuntu GTK lock that gates login/logout behind a question."
     },
     "appImage": {
       "artifactName": "PrepDesk-${version}-linux-x86_64.AppImage"
     },
     "deb": {
       "artifactName": "prepdesk_${version}_amd64.deb",
+      "maintainer": "PrepDesk <prepdesk@users.noreply.github.com>",
       "depends": [
         "libgtk-3-0",
         "libnotify4",
