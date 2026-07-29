@@ -101,7 +101,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 640,
     title: 'Prepilo',
-    icon: path.join(__dirname, 'icons', 'icon.png'),
+    icon: path.join(__dirname, 'icons', '512x512.png'),
     backgroundColor: '#07080a',
     autoHideMenuBar: true,
     webPreferences: {

@@ -5,8 +5,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="${HOME}/.local/bin"
 APPS="${HOME}/.local/share/applications"
-ICONS="${HOME}/.local/share/icons/hicolor/256x256/apps"
-mkdir -p "$BIN" "$APPS" "$ICONS"
+ICON_BASE="${HOME}/.local/share/icons/hicolor"
+mkdir -p "$BIN" "$APPS"
 
 APPIMAGE=""
 if [[ "${1:-}" == *.AppImage ]]; then
@@ -21,9 +21,13 @@ if [[ -n "$APPIMAGE" && -f "$APPIMAGE" ]]; then
   cp "$APPIMAGE" "$DEST/Prepilo.AppImage"
   chmod +x "$DEST/Prepilo.AppImage"
   ln -sfn "$DEST/Prepilo.AppImage" "$BIN/prepilo"
-  if [[ -f "$ROOT/electron/icons/icon.png" ]]; then
-    cp "$ROOT/electron/icons/icon.png" "$ICONS/prepilo.png"
-  fi
+  for size in 16 32 48 128 256 512; do
+    mkdir -p "$ICON_BASE/${size}x${size}/apps"
+    src="$ROOT/electron/icons/${size}x${size}.png"
+    [[ -f "$src" ]] || src="$ROOT/electron/icons/icon.png"
+    [[ -f "$src" ]] && cp "$src" "$ICON_BASE/${size}x${size}/apps/prepilo.png"
+  done
+  gtk-update-icon-cache -f -t "$ICON_BASE" 2>/dev/null || true
   cat > "$APPS/prepilo.desktop" <<EOF
 [Desktop Entry]
 Type=Application

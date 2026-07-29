@@ -10,13 +10,15 @@ ROOT="$(cd "$(dirname "$SOURCE")/.." && pwd)"
 cd "$ROOT"
 
 # Same React Lock UI as the browser. Prefer XWayland (avoids Wayland Error 11).
-if [[ -n "${PREPILO_GDK_BACKEND:-}" ]]; then
-  export GDK_BACKEND="$PREPILO_GDK_BACKEND"
+if [[ -n "${PREPILO_GDK_BACKEND:-${PREPDESK_GDK_BACKEND:-}}" ]]; then
+  export GDK_BACKEND="${PREPILO_GDK_BACKEND:-$PREPDESK_GDK_BACKEND}"
 else
   export GDK_BACKEND=x11
 fi
 
-export PREPILO_URL="${PREPILO_URL:-http://127.0.0.1:5173/lock}"
+# Do NOT default PREPILO_URL to Vite (:5173) — lock_shell prefers the local API (:4789).
+# Override only if you intentionally want Vite: PREPILO_URL=http://127.0.0.1:5173/lock
+
 # Pure GTK fallback (no WebKit): PREPILO_LOCK_UI=native prepilo-lock
 if [[ "${PREPILO_LOCK_UI:-webkit}" == "native" ]]; then
   exec /usr/bin/python3 "$ROOT/desktop/native_lock.py" "$@"

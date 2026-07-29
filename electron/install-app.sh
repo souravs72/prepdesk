@@ -14,10 +14,22 @@ mkdir -p "$BIN" "$APPS"
 
 chmod +x "$ROOT/electron/prepilo-app"
 ICON_SRC="$ROOT/electron/icons/icon.png"
-if [[ -f "$ICON_SRC" ]]; then
-  mkdir -p "$HOME/.local/share/icons/hicolor/256x256/apps" "$HOME/.local/share/icons/hicolor/512x512/apps"
-  cp "$ICON_SRC" "$HOME/.local/share/icons/hicolor/256x256/apps/prepilo.png"
-  cp "$ICON_SRC" "$HOME/.local/share/icons/hicolor/512x512/apps/prepilo.png"
+ICON_512="$ROOT/electron/icons/512x512.png"
+ICON_256="$ROOT/electron/icons/256x256.png"
+if [[ -f "$ICON_SRC" || -f "$ICON_512" ]]; then
+  mkdir -p \
+    "$HOME/.local/share/icons/hicolor/16x16/apps" \
+    "$HOME/.local/share/icons/hicolor/32x32/apps" \
+    "$HOME/.local/share/icons/hicolor/48x48/apps" \
+    "$HOME/.local/share/icons/hicolor/128x128/apps" \
+    "$HOME/.local/share/icons/hicolor/256x256/apps" \
+    "$HOME/.local/share/icons/hicolor/512x512/apps"
+  for size in 16 32 48 128 256 512; do
+    src="$ROOT/electron/icons/${size}x${size}.png"
+    [[ -f "$src" ]] || src="${ICON_512:-$ICON_SRC}"
+    cp "$src" "$HOME/.local/share/icons/hicolor/${size}x${size}/apps/prepilo.png"
+  done
+  gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" 2>/dev/null || true
 fi
 
 ln -sfn "$ROOT/electron/prepilo-app" "$BIN/prepilo"

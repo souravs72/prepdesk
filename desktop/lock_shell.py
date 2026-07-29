@@ -31,12 +31,6 @@ from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
 
 API = "http://127.0.0.1:4789"
 ROOT = Path(__file__).resolve().parents[1]
-# Prefer built UI from the local API (no Vite). Fall back to Vite for dev.
-WEB_BASE = os.environ.get("PREPILO_URL") or os.environ.get("PREPDESK_URL") or (
-    "http://127.0.0.1:4789/lock"
-    if (ROOT / "dist" / "index.html").exists()
-    else "http://127.0.0.1:5173/lock"
-)
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import keybinds  # noqa: E402
 from paths import CONFIG, ensure_config  # noqa: E402
@@ -44,6 +38,16 @@ from paths import CONFIG, ensure_config  # noqa: E402
 ensure_config()
 
 _restored = False
+
+
+def resolve_web_base() -> str:
+    """Prefer built UI via local API; Vite only if explicitly requested or no dist."""
+    explicit = os.environ.get("PREPILO_URL") or os.environ.get("PREPDESK_URL")
+    if explicit:
+        return explicit
+    if (ROOT / "dist" / "index.html").exists():
+        return f"{API}/lock"
+    return "http://127.0.0.1:5173/lock"
 
 
 def safe_restore() -> None:
@@ -94,8 +98,8 @@ def wait_for(url: str, tries: int = 60) -> bool:
     return False
 
 
-def ensure_services() -> None:
-    """Start the local API (serves dist UI + lock endpoints). Vite only as fallback."""
+def ensure_services() -> str:
+    """Start the local API (serves dist UI + lock endpoints). Returns UI base URL."""
     api_ok = False
     try:
         api_json("GET", "/health", timeout=0.8)
@@ -116,27 +120,45 @@ def ensure_services() -> None:
             print("Prepilo API failed to start", file=sys.stderr)
             sys.exit(1)
 
-    # UI: prefer dist via API; otherwise start Vite for /lock
     dist_ui = ROOT / "dist" / "index.html"
-    if dist_ui.exists():
-        if wait_for(f"{API}/lock", 20):
-            return
+    if not dist_ui.exists():
+        print("Building Prepilo UI (first run)…", flush=True)
+        built = subprocess.run(
+            ["npm", "run", "build"],
+            cwd=str(ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if built.returncode != 0 or not dist_ui.exists():
+            print("npm run build failed — falling back to Vite", file=sys.stderr)
+
+    web_base = resolve_web_base()
+    if web_base.startswith(API):
+        if wait_for(f"{API}/lock", 20) or wait_for(f"{API}/", 20):
+            return f"{API}/lock"
+        print("API up but /lock not ready", file=sys.stderr)
+
+    # Vite fallback for explicit URL or missing dist
     try:
         with urllib.request.urlopen("http://127.0.0.1:5173/", timeout=0.8):
-            return
+            return web_base if "5173" in web_base else "http://127.0.0.1:5173/lock"
     except Exception:
         pass
-    subprocess.Popen(
-        ["npm", "run", "dev:web"],
-        cwd=str(ROOT),
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        env=os.environ.copy(),
-        start_new_session=True,
-    )
-    if not wait_for("http://127.0.0.1:5173/", 90):
-        print("Prepilo UI failed to start (build with npm run build, or npm run dev:web)", file=sys.stderr)
-        sys.exit(1)
+    if "5173" in web_base or not dist_ui.exists():
+        subprocess.Popen(
+            ["npm", "run", "dev:web"],
+            cwd=str(ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=os.environ.copy(),
+            start_new_session=True,
+        )
+        if not wait_for("http://127.0.0.1:5173/", 90):
+            print("Prepilo UI failed to start (build with npm run build, or npm run dev:web)", file=sys.stderr)
+            sys.exit(1)
+        return "http://127.0.0.1:5173/lock"
+
+    return f"{API}/lock"
 
 
 def mark_gate_cleared(gate: str, reason: str) -> None:
@@ -168,7 +190,7 @@ def display_is_wayland() -> bool:
 
 
 class LockWindow(Gtk.Window):
-    def __init__(self, token: str, gate: str = "login"):
+    def __init__(self, token: str, gate: str = "login", web_base: str | None = None):
         super().__init__(title="Prepilo Lock")
         self.token = token
         self.gate = gate
@@ -176,6 +198,7 @@ class LockWindow(Gtk.Window):
         self._poll_busy = False
         self._grab_ok = False
         self._grab_attempts = 0
+        ui = web_base or resolve_web_base()
 
         self.set_decorated(False)
         self.set_keep_above(True)
@@ -195,9 +218,9 @@ class LockWindow(Gtk.Window):
         self.view.connect("decide-policy", self._on_policy)
 
         self.add(self.view)
-        sep = "&" if "?" in WEB_BASE else "?"
+        sep = "&" if "?" in ui else "?"
         self.view.load_uri(
-            f"{WEB_BASE}{sep}token={quote(token)}&gate={quote(gate)}"
+            f"{ui}{sep}token={quote(token)}&gate={quote(gate)}"
         )
         self.show_all()
 
@@ -359,7 +382,7 @@ def main(argv: list[str] | None = None) -> int:
     if (CONFIG / "keybinds-backup.json").exists():
         keybinds.restore()
 
-    ensure_services()
+    web_base = ensure_services()
 
     try:
         armed = api_json("POST", "/lock/arm", {"source": f"webkit-shell:{gate}"}, timeout=3.0)
@@ -376,11 +399,11 @@ def main(argv: list[str] | None = None) -> int:
     atexit.register(safe_restore)
 
     print(
-        f"Prepilo lock starting (gate={gate}, UI=React/WebKit, GDK_BACKEND={os.environ.get('GDK_BACKEND')})",
+        f"Prepilo lock starting (gate={gate}, UI={web_base}, GDK_BACKEND={os.environ.get('GDK_BACKEND')})",
         flush=True,
     )
 
-    win = LockWindow(token, gate=gate)
+    win = LockWindow(token, gate=gate, web_base=web_base)
     win.show_all()
 
     def _on_signal(_s, _f):

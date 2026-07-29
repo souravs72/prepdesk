@@ -1,7 +1,7 @@
 {
   "name": "prepilo",
   "private": false,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Prepilo — desktop interview prep (Electron study app + GTK lock)",
   "author": {
     "name": "Prepilo",
@@ -107,7 +107,7 @@
         "deb"
       ],
       "category": "Education",
-      "icon": "electron/icons/icon.png",
+      "icon": "electron/icons",
       "synopsis": "Interview prep study desk with optional GTK session lock",
       "description": "Prepilo helps you practice DSA, system design, OS, and DBMS with daily sets, mocks, and analytics. Includes an optional Ubuntu GTK lock that gates login/logout behind a question."
     },

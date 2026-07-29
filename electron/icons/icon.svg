@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="160" y1="64" x2="880" y2="960" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#161A20"/>
+      <stop offset="1" stop-color="#0A0C10"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="300" y1="220" x2="700" y2="760" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#46E4CC"/>
+      <stop offset="1" stop-color="#18A892"/>
+    </linearGradient>
+  </defs>
+  <!-- App tile -->
+  <rect x="72" y="72" width="880" height="880" rx="200" fill="url(#bg)"/>
+  <rect x="96" y="96" width="832" height="832" rx="180" stroke="#2C3540" stroke-width="6" fill="none" opacity="0.85"/>
+
+  <!-- Bold geometric P -->
+  <path fill="url(#mark)" d="
+    M318 236
+    h252
+    c124 0 208 78 208 188
+    s-84 188 -208 188
+    H406
+    v184
+    c0 20 -16 36 -36 36
+    h-16
+    c-20 0 -36 -16 -36 -36
+    V272
+    c0 -20 16 -36 36 -36
+    z
+    M406 336
+    v180
+    h156
+    c64 0 108 -40 108 -90
+    s-44 -90 -108 -90
+    H406
+    z"/>
+
+  <!-- Ascending chevron (prep / pilot) inside the bowl -->
+  <path fill="#9AF7E6" d="
+    M470 470
+    l78 -78
+    c12 -12 32 -12 44 0
+    l22 22
+    c12 12 12 32 0 44
+    l-78 78
+    c-12 12 -32 12 -44 0
+    l-22 -22
+    c-12 -12 -12 -32 0 -44
+    z"/>
+</svg>
