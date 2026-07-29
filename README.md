@@ -1,70 +1,101 @@
 # PrepDesk
 
-Premium desktop-first interview preparation platform.
+Premium desktop interview preparation platform.
 
-**Location:** `/home/ascra/Projects/prepdesk`
+- **Study app:** Electron desktop window  
+- **Session lock:** GTK + WebKit (Ubuntu/GNOME), optional  
+
+## Install (end users)
+
+### Option A — AppImage (recommended)
+
+1. Download `PrepDesk-*-linux-x86_64.AppImage` from [Releases](https://github.com/souravs72/prepdesk/releases).
+2. Make it executable and run:
+
+```bash
+chmod +x PrepDesk-*-linux-x86_64.AppImage
+./PrepDesk-*-linux-x86_64.AppImage
+```
+
+Or install a launcher:
+
+```bash
+./scripts/install-from-appimage.sh ./PrepDesk-*-linux-x86_64.AppImage
+prepdesk
+```
+
+### Option B — `.deb`
+
+```bash
+sudo apt install ./prepdesk_*_amd64.deb
+```
+
+### Option C — from source (developers)
+
+```bash
+git clone https://github.com/souravs72/prepdesk.git
+cd prepdesk
+npm install
+npm run build
+npm run install-app    # study app launcher
+npm run install-lock   # optional GTK login/logout lock
+prepdesk
+```
+
+## Build distributables (maintainers)
+
+```bash
+npm ci
+npm run dist           # → release/*.AppImage and release/*.deb
+```
+
+Tag a version to publish via GitHub Actions:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ## Features
 
-- **Daily set** — 12 original questions/day (MCQ, objective, coding) across DSA, system design, OS, DBMS
-- **Dynamic generation** — combinatorial templates inspired by LeetCode / GFG / InterviewBit *style* (no scraped content)
-- **Rich explanations** — why right, why wrong, complexities, pitfalls, alternatives, follow-ups
-- **Coding playground** — Monaco editor, 6 languages, sample + hidden tests
-- **Local runner** — executes code against tests (`python`, `node`; others if toolchains exist)
-- **Practice filters** — topic, difficulty, domain
-- **Mock interviews** — timed 5-question sessions
-- **Analytics** — accuracy, streaks, weak/strong topics
-- **AI coach** — local progressive hints + optional OpenAI key
+- Daily set of original interview-style questions (DSA, system design, OS, DBMS)
+- Practice, playground (Monaco), mock interviews, analytics, AI coach
+- Optional desktop lock that gates login / logout / shutdown behind a question
+- Local code runner API on `127.0.0.1:4789`
 
-## Quick start (browser study mode)
+## Desktop lock (optional, Ubuntu)
 
 ```bash
-cd /home/ascra/Projects/prepdesk
-npm install
-npm run dev
+npm run install-lock
+prepdesk-show-bypass   # write this down
+prepdesk-lock
 ```
 
-Open [http://127.0.0.1:5173](http://127.0.0.1:5173). API on `127.0.0.1:4789`.
-
-## Desktop lock — native GTK (cannot dismiss until solved)
-
-Pure **GTK3** fullscreen lock (no WebKit). Grabs keyboard + pointer when the session allows it, disables GNOME Alt+Tab / Super / logout shortcuts until you solve an MCQ/objective question **correctly**, or type the emergency bypass key (paste blocked).
-
-```bash
-npm run install-lock          # autostart + ~/.config/prepdesk/bypass.key
-prepdesk-show-bypass          # WRITE THIS DOWN (TTY-safe)
-prepdesk-lock                 # test the native lock now
-```
-
-Needs: `python3-gi`, GTK 3. Runner API auto-starts (`npm run runner`) for unlock/analytics. Study UI (`npm run dev`) is optional.
-
-OpenAI explanations use `OPENAI_API_KEY` + model from:
-
-- `~/.config/daily-work-digest/.env`
-- `~/.config/daily-work-digest/config.yaml` (`openai.model`)
+Needs: `python3-gi`, GTK 3, `gir1.2-webkit2-4.1`. Bypass key lives in `~/.config/prepdesk/bypass.key` (local only — never commit).
 
 Stuck? `Ctrl+Alt+F3` → `prepdesk-show-bypass` or `desktop/uninstall-lock.sh`.
 
-```bash
-npm test
-npm run build
-```
+OpenAI (optional) from `~/.config/daily-work-digest/.env` + `config.yaml`.
 
 ## Architecture
 
 ```text
-desktop/
-  native_lock.py      # Native GTK lock UI + seat grab
-  native_questions.py # Lock MCQ/objective bank + grading
-  keybinds.py         # GNOME shortcut snapshot/restore
-  lock_shell.py       # Legacy WebKit shell (unused by default)
-src/                  # Browser study app (Vite/React)
-server/runner.mjs     # Local API: run, lock arm/unlock, analytics
-tests/                # Vitest
+electron/     Study UI shell (Electron)
+desktop/      GTK lock + session guard
+src/          React UI
+server/       Local runner API
+release/      Built AppImage/deb (gitignored)
 ```
+
+## Local vs GitHub
+
+| Keep local only | Commit to GitHub |
+|-----------------|------------------|
+| `node_modules/`, `dist/`, `release/` | Source under `src/`, `electron/`, `desktop/`, `server/` |
+| `~/.config/prepdesk/*` (bypass, analytics) | `README`, workflows, icons |
+| API keys / `.env` | Tests, package manifests |
 
 ## Notes
 
-- Questions are **original**. Do not expect verbatim LeetCode statements.
-- Catalogue “size” is combinatorial (templates × params × topics), not a giant static JSON dump.
-- Older DSA Gate sketch lived under Desktop learning apps / Projects/dsa_gate — PrepDesk replaces it as the product.
+- Questions are original / combinatorial — not scraped LeetCode dumps.
+- Repo should be **public** (or Releases public) for others to download packages.

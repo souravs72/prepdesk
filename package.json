@@ -1,17 +1,33 @@
 {
   "name": "prepdesk",
-  "private": true,
+  "private": false,
   "version": "1.0.0",
+  "description": "PrepDesk — desktop interview prep (Electron study app + GTK lock)",
+  "author": "PrepDesk",
+  "license": "MIT",
+  "homepage": "https://github.com/souravs72/prepdesk",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/souravs72/prepdesk.git"
+  },
   "type": "module",
+  "main": "electron/main.mjs",
   "scripts": {
     "dev": "concurrently -k -n web,runner -c teal,yellow \"vite\" \"node server/runner.mjs\"",
     "dev:web": "vite",
     "runner": "node server/runner.mjs",
+    "electron": "electron electron/main.mjs",
+    "electron:dev": "concurrently -k -n web,runner,app -c teal,yellow,magenta \"vite\" \"node server/runner.mjs\" \"wait-on http://127.0.0.1:5173 http://127.0.0.1:4789/health && electron electron/main.mjs\"",
+    "electron:prod": "npm run build && PREPDESK_ELECTRON_PROD=1 electron electron/main.mjs",
+    "app": "electron/prepdesk-app",
     "lock": "desktop/prepdesk-lock",
     "show-bypass": "desktop/show-bypass.sh",
     "rotate-bypass": "desktop/rotate-bypass.sh",
     "install-lock": "desktop/install-lock.sh",
+    "install-app": "electron/install-app.sh",
     "build": "tsc -b && vite build",
+    "dist": "npm run build && electron-builder --linux AppImage deb",
+    "dist:dir": "npm run build && electron-builder --linux dir",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "oxlint"
@@ -43,11 +59,74 @@
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.3",
     "concurrently": "^10.0.4",
+    "electron": "^37.2.0",
+    "electron-builder": "^26.15.3",
     "jsdom": "^30.0.0",
     "oxlint": "^1.71.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wait-on": "^8.0.5"
+  },
+  "build": {
+    "appId": "com.prepdesk.app",
+    "productName": "PrepDesk",
+    "copyright": "Copyright © PrepDesk",
+    "directories": {
+      "output": "release",
+      "buildResources": "electron/icons"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/main.mjs",
+      "electron/preload.cjs",
+      "electron/icons/**/*",
+      "server/runner.mjs",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "server/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "desktop",
+        "to": "desktop",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Education",
+      "icon": "electron/icons/icon.png",
+      "synopsis": "Interview prep study desk with optional GTK session lock",
+      "description": "PrepDesk helps you practice DSA, system design, OS, and DBMS with daily sets, mocks, and analytics. Includes an optional Ubuntu GTK lock that gates login/logout behind a question.",
+      "desktop": {
+        "Name": "PrepDesk",
+        "Comment": "Interview prep study desk",
+        "Categories": "Education;Development;"
+      }
+    },
+    "appImage": {
+      "artifactName": "PrepDesk-${version}-linux-x86_64.AppImage"
+    },
+    "deb": {
+      "artifactName": "prepdesk_${version}_amd64.deb",
+      "depends": [
+        "libgtk-3-0",
+        "libnotify4",
+        "libnss3",
+        "libxss1",
+        "libxtst6",
+        "xdg-utils",
+        "libatspi2.0-0",
+        "libuuid1"
+      ]
+    }
   }
 }

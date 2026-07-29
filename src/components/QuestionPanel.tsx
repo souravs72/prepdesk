@@ -66,16 +66,14 @@ export function QuestionPanel({
   }, [lang])
 
   const feedback = useMemo(
-    () => (submitted ? buildFeedback(question, correct, choice) : []),
-    [submitted, correct, question, choice],
+    () => (submitted ? buildFeedback(question, correct, choice, { compact: lockMode || !correct }) : []),
+    [submitted, correct, question, choice, lockMode],
   )
 
   async function fetchExplanation(ok: boolean, userAnswer?: string) {
     // In lock mode, don't spoil the full solution until they get it right
     if (lockMode && !ok) {
-      setAiMarkdown(
-        '## Not quite\n\nUse **Hint chat** for nudges (no full answer). Then try again — the desktop stays locked until you solve it or use the bypass key.',
-      )
+      setAiMarkdown('')
       setAiSource('lock')
       return
     }
@@ -147,16 +145,20 @@ export function QuestionPanel({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className={lockMode ? 'space-y-4' : 'grid gap-4 lg:grid-cols-[1.1fr_0.9fr]'}>
       <Card className="shine space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <DiffBadge d={question.difficulty} />
           <Badge>{TOPIC_LABEL[question.topic]}</Badge>
-          <Badge tone="accent">{question.company}</Badge>
+          {!lockMode && <Badge tone="accent">{question.company}</Badge>}
           <Badge>{question.kind}</Badge>
-          <Badge>~{question.estimatedMinutes}m</Badge>
-          <Badge>freq {question.interviewFrequency}</Badge>
           {lockMode && <Badge tone="warn">locked</Badge>}
+          {!lockMode && (
+            <>
+              <Badge>~{question.estimatedMinutes}m</Badge>
+              <Badge>freq {question.interviewFrequency}</Badge>
+            </>
+          )}
         </div>
         <h2 className="text-2xl font-semibold tracking-tight">{question.title}</h2>
         <p className="leading-relaxed text-[var(--color-muted)]">{question.prompt}</p>
@@ -352,7 +354,7 @@ export function QuestionPanel({
         )}
       </Card>
 
-      <div className="space-y-4">
+      <div className={lockMode && !submitted ? 'hidden' : 'space-y-4'}>
         <AnimatePresence>
           {submitted && (
             <motion.div
@@ -368,32 +370,34 @@ export function QuestionPanel({
                 }
               >
                 <div className="text-lg font-semibold">{correct ? 'Correct' : 'Not quite'}</div>
-                <p className="mt-1 text-sm text-[var(--color-muted)]">
-                  {lockMode && !correct
-                    ? 'Read the explanation, then try again — the desktop stays locked until you get it right (or use bypass).'
-                    : 'Full explanation below.'}
-                </p>
+                {!correct && feedback[0] && (
+                  <p className="mt-1 text-sm text-[var(--color-muted)]">{feedback[0].body}</p>
+                )}
+                {lockMode && !correct && (
+                  <p className="mt-2 text-xs text-[var(--color-faint)]">Try again or ask for a hint.</p>
+                )}
               </Card>
 
-              {aiLoading && (
+              {correct && aiLoading && (
                 <Card>
-                  <p className="text-sm text-[var(--color-muted)]">Writing a full explanation…</p>
+                  <p className="text-sm text-[var(--color-muted)]">Writing explanation…</p>
                 </Card>
               )}
 
-              {aiMarkdown && (
+              {correct && aiMarkdown && (
                 <Card>
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
-                      Full explanation
+                      Explanation
                     </div>
-                    <Badge tone="accent">{aiSource}</Badge>
+                    {!lockMode && <Badge tone="accent">{aiSource}</Badge>}
                   </div>
                   <MarkdownBody content={aiMarkdown} />
                 </Card>
               )}
 
-              {!aiMarkdown &&
+              {correct &&
+                !aiMarkdown &&
                 feedback.map((f) => (
                   <Card key={f.title}>
                     <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
@@ -405,14 +409,6 @@ export function QuestionPanel({
             </motion.div>
           )}
         </AnimatePresence>
-        {!submitted && (
-          <Card>
-            <div className="text-sm text-[var(--color-muted)]">
-              Submit to unlock a full explanation (local + OpenAI from your daily-work-digest
-              config): why right/wrong, intuition, complexity, pitfalls, alternatives, follow-ups.
-            </div>
-          </Card>
-        )}
       </div>
     </div>
   )

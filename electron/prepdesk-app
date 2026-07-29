@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Launch PrepDesk study UI in Electron (lock remains GTK via prepdesk-lock).
+set -euo pipefail
+SOURCE="${BASH_SOURCE[0]}"
+while [[ -L "$SOURCE" ]]; do
+  DIR="$(cd "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+ROOT="$(cd "$(dirname "$SOURCE")/.." && pwd)"
+cd "$ROOT"
+
+if [[ ! -d node_modules/electron ]]; then
+  echo "Installing dependencies…"
+  npm install
+fi
+
+# Default: production load of dist/. Use PREPDESK_ELECTRON_PROD=0 for Vite URL.
+if [[ -z "${PREPDESK_ELECTRON_PROD:-}" ]]; then
+  if [[ -f "$ROOT/dist/index.html" ]]; then
+    export PREPDESK_ELECTRON_PROD=1
+  else
+    export PREPDESK_ELECTRON_PROD=0
+  fi
+fi
+
+exec npx electron "$ROOT/electron/main.mjs" "$@"

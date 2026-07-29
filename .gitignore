@@ -10,7 +10,14 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
+release
 *.local
+
+# Local secrets / user state (never commit)
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +29,11 @@ dist-ssr
 *.sln
 *.sw?
 __pycache__/
+*.pyc
+
+# Duplicate / oversized generated assets (canonical icon: electron/icons/icon.png)
+assets/
+electron/icons/icon-512.png
+electron/icons/icon-256.png
+electron/icons/icon-128.png
+electron/icons/icon-tmp.png

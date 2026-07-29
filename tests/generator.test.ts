@@ -61,7 +61,8 @@ describe('grading + explanations', () => {
     expect(gradeMcq(q, correct.id)).toBe(true)
     expect(gradeMcq(q, wrong.id)).toBe(false)
     const fb = buildFeedback(q, false, wrong.id)
-    expect(fb.some((f) => /wrong|correct/i.test(f.title))).toBe(true)
+    expect(fb).toHaveLength(1)
+    expect(fb[0]!.title).toMatch(/why not/i)
   })
 
   it('grades objective answers case-insensitively', () => {

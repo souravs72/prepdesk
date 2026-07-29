@@ -3,15 +3,21 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BIN="$HOME/.local/bin"
 AUTO="$HOME/.config/autostart"
-mkdir -p "$BIN" "$AUTO" "$HOME/.config/prepdesk"
+SYSTEMD_USER="${HOME}/.config/systemd/user"
+mkdir -p "$BIN" "$AUTO" "$HOME/.config/prepdesk" "$SYSTEMD_USER"
 
 chmod +x \
   "$ROOT/desktop/native_lock.py" \
+  "$ROOT/desktop/session_guard.py" \
   "$ROOT/desktop/prepdesk-lock" \
+  "$ROOT/desktop/prepdesk-guard" \
+  "$ROOT/desktop/end-session.sh" \
   "$ROOT/desktop/show-bypass.sh" \
   "$ROOT/desktop/lock_shell.py"
 
 ln -sfn "$ROOT/desktop/prepdesk-lock" "$BIN/prepdesk-lock"
+ln -sfn "$ROOT/desktop/prepdesk-guard" "$BIN/prepdesk-guard"
+ln -sfn "$ROOT/desktop/end-session.sh" "$BIN/prepdesk-end-session"
 ln -sfn "$ROOT/desktop/show-bypass.sh" "$BIN/prepdesk-show-bypass"
 ln -sfn "$ROOT/desktop/rotate-bypass.sh" "$BIN/prepdesk-rotate-bypass"
 
@@ -25,6 +31,70 @@ Exec=/usr/bin/python3 $ROOT/desktop/keybinds.py restore
 Terminal=false
 X-GNOME-Autostart-enabled=true
 X-GNOME-Autostart-Delay=1
+EOF
+
+# Session guard: inhibit logout/shutdown for the whole session
+cat > "$AUTO/prepdesk-guard.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PrepDesk Session Guard
+Comment=Gate logout/shutdown behind PrepDesk questions
+Exec=$BIN/prepdesk-guard
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=2
+StartupNotify=false
+EOF
+
+# Login lock
+cat > "$AUTO/prepdesk-lock.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PrepDesk Lock
+Comment=Solve one interview question to unlock your desktop
+Exec=$BIN/prepdesk-lock --gate login
+Icon=utilities-terminal
+Terminal=false
+X-GNOME-Autostart-enabled=true
+X-GNOME-Autostart-Delay=4
+StartupNotify=false
+EOF
+
+# Gated session-end helpers (hidden from app grid — use prepdesk-end-session or Ctrl+Alt+Delete)
+APPS="$HOME/.local/share/applications"
+mkdir -p "$APPS"
+cat > "$APPS/prepdesk-logout.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PrepDesk Logout
+Comment=Solve a PrepDesk question, then log out
+Exec=$BIN/prepdesk-end-session logout
+Icon=system-log-out
+Terminal=false
+Categories=System;
+NoDisplay=true
+EOF
+cat > "$APPS/prepdesk-shutdown.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PrepDesk Shutdown
+Comment=Solve a PrepDesk question, then power off
+Exec=$BIN/prepdesk-end-session poweroff
+Icon=system-shutdown
+Terminal=false
+Categories=System;
+NoDisplay=true
+EOF
+cat > "$APPS/prepdesk-reboot.desktop" <<EOF
+[Desktop Entry]
+Type=Application
+Name=PrepDesk Reboot
+Comment=Solve a PrepDesk question, then reboot
+Exec=$BIN/prepdesk-end-session reboot
+Icon=system-reboot
+Terminal=false
+Categories=System;
+NoDisplay=true
 EOF
 
 # Ensure / rotate to a ~73-char 2-UUID bypass key
@@ -45,23 +115,38 @@ if(!cur || cur.length < 70 || cur.length > 80){
 }
 "
 
-cat > "$AUTO/prepdesk-lock.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Name=PrepDesk Lock
-Comment=Solve one interview question to unlock your desktop
-Exec=$BIN/prepdesk-lock
-Icon=utilities-terminal
-Terminal=false
-X-GNOME-Autostart-enabled=true
-X-GNOME-Autostart-Delay=3
-StartupNotify=false
+# systemd user units (backup if autostart is flaky)
+cat > "${SYSTEMD_USER}/prepdesk-guard.service" <<EOF
+[Unit]
+Description=PrepDesk session guard (logout/shutdown gate)
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=$BIN/prepdesk-guard
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
 EOF
 
-echo
-echo "Installing retest timer (checks every 15 minutes)…"
-SYSTEMD_USER="${HOME}/.config/systemd/user"
-mkdir -p "${SYSTEMD_USER}"
+cat > "${SYSTEMD_USER}/prepdesk-lock.service" <<EOF
+[Unit]
+Description=PrepDesk login lock
+PartOf=graphical-session.target
+After=graphical-session.target prepdesk-guard.service
+
+[Service]
+Type=oneshot
+ExecStart=$BIN/prepdesk-lock --gate login
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+
+# Retest timer
 cat > "${SYSTEMD_USER}/prepdesk-retest.service" <<EOF
 [Unit]
 Description=PrepDesk retest launcher
@@ -82,22 +167,38 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 EOF
+
 systemctl --user daemon-reload 2>/dev/null || true
+systemctl --user enable prepdesk-guard.service 2>/dev/null || true
+systemctl --user enable prepdesk-lock.service 2>/dev/null || true
 systemctl --user enable --now prepdesk-retest.timer 2>/dev/null || echo "(systemd user timer not enabled — run manually later)"
 
+# Point Ctrl+Alt+Del / logout shortcut at PrepDesk gate when possible
+if command -v gsettings >/dev/null 2>&1; then
+  gsettings set org.gnome.settings-daemon.plugins.media-keys logout "['']" 2>/dev/null || true
+  # Custom keybinding: Ctrl+Alt+Delete → gated logout
+  gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings \
+    "['/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/']" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/ name "PrepDesk Logout" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/ command "$BIN/prepdesk-end-session logout" 2>/dev/null || true
+  gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/prepdesk-logout/ binding "<Control><Alt>Delete" 2>/dev/null || true
+fi
+
 echo
-echo "Installed PrepDesk Lock"
-echo "  Autostart: $AUTO/prepdesk-lock.desktop"
-echo "  Command:   prepdesk-lock"
-echo "  Bypass:    prepdesk-show-bypass   (TTY/Ctrl+Alt+F3 if stuck)"
-echo "  Key file:  ~/.config/prepdesk/bypass.key"
-echo "  Retest:    prepdesk-retest.timer (if systemd user available)"
+echo "Installed PrepDesk Lock + Session Guard"
+echo "  Login lock:     autostart + systemd (graphical-session)"
+echo "  Session guard:  blocks logout/suspend/shutdown until gated"
+echo "  Commands:       prepdesk-lock | prepdesk-guard | prepdesk-end-session"
+echo "  Apps menu:      PrepDesk Logout / Shutdown / Reboot"
+echo "  Bypass:         prepdesk-show-bypass   (TTY / Ctrl+Alt+F3 if stuck)"
+echo "  Key file:       ~/.config/prepdesk/bypass.key"
 echo
 echo "IMPORTANT: write down the bypass key before next login:"
 echo "  prepdesk-show-bypass"
 echo
-echo "Native GTK lock grabs keyboard+mouse when possible; gsettings disables Alt+Tab/Super/logout until unlock."
-echo "Hard power-button shutdown is NOT blocked."
+echo "Hard power-hold still works as last resort — not blocked at firmware level."
 echo
-echo "Test now:  prepdesk-lock"
+echo "Apply now (this session):"
+echo "  prepdesk-guard &"
+echo "  prepdesk-lock"
 echo "Uninstall: ${ROOT}/desktop/uninstall-lock.sh"

@@ -26,16 +26,21 @@ const DIGEST_CFG = path.join(os.homedir(), '.config', 'daily-work-digest', 'conf
 const app = express()
 app.use(
   cors({
-    origin: [
-      'http://127.0.0.1:5173',
-      'http://localhost:5173',
-      'http://127.0.0.1:4173',
-      'http://localhost:4173',
-    ],
+    // Electron (file://), Vite, GTK WebKit, and local tools
+    origin: true,
     methods: ['GET', 'POST', 'OPTIONS'],
   }),
 )
 app.use(express.json({ limit: '1mb' }))
+
+const DIST = path.join(ROOT, 'dist')
+if (fsSync.existsSync(DIST)) {
+  app.use(express.static(DIST, { index: false }))
+  // SPA fallback for BrowserRouter routes (e.g. /lock)
+  app.get(['/lock', '/practice', '/playground', '/mock', '/analytics', '/coach', '/'], (_req, res) => {
+    res.sendFile(path.join(DIST, 'index.html'))
+  })
+}
 
 function ensureConfigDir() {
   fsSync.mkdirSync(CONFIG_DIR, { recursive: true })

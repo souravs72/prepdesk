@@ -8,6 +8,7 @@ import json
 import os
 import re
 import signal
+import threading
 import subprocess
 import sys
 import time
@@ -15,11 +16,17 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+# Native Wayland seat.grab triggers: Error 11 dispatching to Wayland display.
+# Force XWayland before Gdk initializes unless user opts out.
+_backend = os.environ.get("PREPDESK_GDK_BACKEND") or "x11"
+if os.environ.get("PREPDESK_ALLOW_WAYLAND", "").strip() not in {"1", "true", "yes"}:
+    os.environ["GDK_BACKEND"] = _backend
+
 import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GLib, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -32,6 +39,30 @@ DIGEST_ENV = Path.home() / ".config" / "daily-work-digest" / ".env"
 DIGEST_CFG = Path.home() / ".config" / "daily-work-digest" / "config.yaml"
 
 _restored = False
+
+
+def display_is_wayland() -> bool:
+    if os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland":
+        # Still true even under GDK_BACKEND=x11 (XWayland) — check actual GDK backend.
+        pass
+    try:
+        display = Gdk.Display.get_default()
+        if display is None:
+            return os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
+        name = (display.get_name() or "").lower()
+        # "wayland-0" vs ":0" / "X11"
+        return "wayland" in name
+    except Exception:
+        return os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland"
+
+
+def seat_grab_supported() -> bool:
+    """Exclusive seat grab is unsafe/unstable on native Wayland (Error 11)."""
+    if os.environ.get("PREPDESK_FORCE_GRAB", "").strip() in {"1", "true", "yes"}:
+        return True
+    return not display_is_wayland()
+
+
 CSS = b"""
 window { background-color: #07080a; color: #e8eaef; }
 .label-title { font-size: 26px; font-weight: bold; color: #e8eaef; }
@@ -58,7 +89,13 @@ def safe_restore() -> None:
     _restored = True
 
 
-def api_json(method: str, path: str, payload: dict | None = None, token: str | None = None) -> dict:
+def api_json(
+    method: str,
+    path: str,
+    payload: dict | None = None,
+    token: str | None = None,
+    timeout: float = 2.0,
+) -> dict:
     data = None if payload is None else json.dumps(payload).encode()
     headers = {"Content-Type": "application/json"}
     if token:
@@ -69,23 +106,39 @@ def api_json(method: str, path: str, payload: dict | None = None, token: str | N
         headers=headers,
         method=method,
     )
-    with urllib.request.urlopen(req, timeout=8) as r:
+    with urllib.request.urlopen(req, timeout=timeout) as r:
         return json.loads(r.read().decode())
 
 
-def wait_api(tries: int = 40) -> bool:
+def run_bg(fn, on_done=None) -> None:
+    """Run blocking work off the GTK thread; marshal callbacks with GLib.idle_add."""
+
+    def worker():
+        err = None
+        result = None
+        try:
+            result = fn()
+        except Exception as e:
+            err = e
+        if on_done is not None:
+            GLib.idle_add(lambda: on_done(result, err) or False)
+
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def wait_api(tries: int = 20) -> bool:
     for _ in range(tries):
         try:
-            api_json("GET", "/health")
+            api_json("GET", "/health", timeout=0.8)
             return True
         except Exception:
-            time.sleep(0.35)
+            time.sleep(0.25)
     return False
 
 
 def ensure_runner() -> None:
     try:
-        api_json("GET", "/health")
+        api_json("GET", "/health", timeout=0.8)
         return
     except Exception:
         pass
@@ -98,8 +151,21 @@ def ensure_runner() -> None:
         env=os.environ.copy(),
     )
     if not wait_api():
-        print("PrepDesk API failed to start (npm run runner)", file=sys.stderr)
-        sys.exit(1)
+        print("PrepDesk API slow/unavailable — continuing with local grading", file=sys.stderr)
+
+
+def bypass_ok(key: str) -> bool:
+    path = CONFIG / "bypass.key"
+    try:
+        if path.exists() and path.read_text().strip() == key.strip():
+            return True
+    except OSError:
+        pass
+    try:
+        api_json("POST", "/lock/bypass", {"key": key}, timeout=2.0)
+        return True
+    except Exception:
+        return False
 
 
 def load_openai() -> tuple[str, str]:
@@ -175,12 +241,14 @@ class NoPasteEntry(Gtk.Entry):
 
 
 class NativeLockApp(Gtk.Window):
-    def __init__(self, token: str):
+    def __init__(self, token: str, gate: str = "login"):
         super().__init__(title="PrepDesk Native Lock")
         self.token = token
+        self.gate = gate if gate in {"login", "logout", "poweroff", "shutdown", "reboot", "suspend"} else "login"
         self.question = next_lock_question()
         self.hint_level = 0
         self._grab_ok = False
+        self._solved = False
 
         self.set_decorated(False)
         self.set_keep_above(True)
@@ -205,7 +273,15 @@ class NativeLockApp(Gtk.Window):
         outer.set_margin_end(72)
         self.add(outer)
 
-        brand = Gtk.Label(label="PREPDESK NATIVE LOCK")
+        gate_note = {
+            "login": "LOGIN LOCK — solve to use this session",
+            "logout": "LOGOUT GATE — solve to log out",
+            "poweroff": "SHUTDOWN GATE — solve to power off",
+            "shutdown": "SHUTDOWN GATE — solve to power off",
+            "reboot": "REBOOT GATE — solve to reboot",
+            "suspend": "SUSPEND GATE — solve to suspend",
+        }.get(self.gate, "PREPDESK NATIVE LOCK")
+        brand = Gtk.Label(label=gate_note)
         brand.get_style_context().add_class("label-accent")
         brand.set_xalign(0)
         outer.pack_start(brand, False, False, 0)
@@ -306,7 +382,10 @@ class NativeLockApp(Gtk.Window):
         self._render_question()
         self._append_chat("coach", "Stuck? Ask for a directional hint. I will not give the final answer.")
 
-        GLib.timeout_add(400, self._tick_focus_and_grab)
+        self._status_poll_busy = False
+        self._grab_attempts = 0
+        GLib.timeout_add(1500, self._tick_focus_and_grab)
+        GLib.timeout_add_seconds(3, self._poll_unlock_status)
         self.show_all()
 
     def _render_question(self) -> None:
@@ -368,36 +447,30 @@ class NativeLockApp(Gtk.Window):
             self._set_status("Select or type an answer first.", False)
             return
         ok = grade_answer(self.question, ans)
-        try:
-            api_json(
-                "POST",
-                "/analytics/attempt",
-                {
-                    "questionId": self.question["id"],
-                    "correct": ok,
-                    "kind": self.question["kind"],
-                    "topic": self.question["topic"],
-                    "domain": self.question.get("domain", "dsa"),
-                    "difficulty": self.question["difficulty"],
-                    "timeSpentMs": 0,
-                    "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-                    "userAnswer": ans,
-                },
-            )
-        except Exception:
-            pass
+        payload = {
+            "questionId": self.question["id"],
+            "correct": ok,
+            "kind": self.question["kind"],
+            "topic": self.question["topic"],
+            "domain": self.question.get("domain", "dsa"),
+            "difficulty": self.question["difficulty"],
+            "timeSpentMs": 0,
+            "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "userAnswer": ans,
+        }
+        run_bg(lambda: api_json("POST", "/analytics/attempt", payload, timeout=2.0) or {})
 
         if ok:
             self._set_status("Correct — unlocking…", True)
-            self._show_explanation(True, ans)
-            GLib.timeout_add(800, self._unlock_solved)
+            self._show_explanation_async(True, ans)
+            GLib.timeout_add(350, self._unlock_solved)
         else:
             self._set_status("Not quite — use hints, then try again. Desktop stays locked.", False)
             self.explain_view.get_buffer().set_text(
                 "Wrong for now. Ask the hint chat for a nudge — no full spoilers until you solve it."
             )
 
-    def _show_explanation(self, correct: bool, user_answer: str) -> None:
+    def _local_explanation(self, correct: bool) -> str:
         q = self.question
         local = []
         ex = q.get("explanation", {})
@@ -414,24 +487,76 @@ class NativeLockApp(Gtk.Window):
             local.append("Pitfalls:\n- " + "\n- ".join(ex["pitfalls"]))
         if ex.get("followUps"):
             local.append("Follow-ups:\n- " + "\n- ".join(ex["followUps"]))
-        base = "\n\n".join(local)
+        return "\n\n".join(local)
 
-        rich = openai_chat(
-            "You are an interview coach. Write a clear plain-text explanation (no markdown fences). Teach intuition.",
-            json.dumps({"question": q, "correct": correct, "userAnswer": user_answer, "facts": base}),
-        )
-        self.explain_view.get_buffer().set_text(rich.strip() or base)
+    def _show_explanation_async(self, correct: bool, user_answer: str) -> None:
+        base = self._local_explanation(correct)
+        self.explain_view.get_buffer().set_text(base)
+        q = self.question
 
-    def _unlock_solved(self) -> bool:
+        def work():
+            return openai_chat(
+                "You are an interview coach. Write a clear plain-text explanation (no markdown fences). Teach intuition.",
+                json.dumps({"question": q, "correct": correct, "userAnswer": user_answer, "facts": base}),
+            )
+
+        def done(rich, _err):
+            text = (rich or "").strip() or base
+            if text.startswith("(OpenAI unavailable"):
+                text = base
+            self.explain_view.get_buffer().set_text(text)
+
+        run_bg(work, done)
+
+    def _mark_gate_cleared(self, reason: str) -> None:
+        self._solved = True
         try:
-            api_json("POST", "/lock/unlock", {"reason": "solved", "token": self.token}, token=self.token)
-            api_json("POST", "/retest/clear", {})
-        except Exception as e:
-            self._set_status(f"Unlock API failed: {e}", False)
-            return False
+            CONFIG.mkdir(parents=True, exist_ok=True)
+            (CONFIG / "gate-cleared.json").write_text(
+                json.dumps(
+                    {
+                        "ok": True,
+                        "action": self.gate,
+                        "reason": reason,
+                        "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                    }
+                )
+                + "\n"
+            )
+        except OSError:
+            pass
+
+    def _finish_unlock(self) -> None:
+        self._mark_gate_cleared("solved")
         safe_restore()
         self._ungrab()
         Gtk.main_quit()
+
+    def _unlock_solved(self) -> bool:
+        # Always unlock locally first so a hung API cannot freeze the session.
+        token = self.token
+
+        def work():
+            try:
+                if token:
+                    api_json(
+                        "POST",
+                        "/lock/unlock",
+                        {"reason": "solved", "token": token},
+                        token=token,
+                        timeout=2.0,
+                    )
+                api_json("POST", "/retest/clear", {}, timeout=1.5)
+            except Exception:
+                pass
+            return True
+
+        def done(_r, _e):
+            self._finish_unlock()
+
+        run_bg(work, done)
+        # Safety: if background never returns, still unlock shortly.
+        GLib.timeout_add(2500, lambda: (not self._solved and self._finish_unlock()) or False)
         return False
 
     def _on_hint(self, *_a) -> None:
@@ -445,11 +570,29 @@ class NativeLockApp(Gtk.Window):
             "Compare brute force vs one improvement idea — still no full solution.",
         ]
         idx = min(self.hint_level - 1, len(local_hints) - 1)
-        rich = openai_chat(
-            "Socratic coach. Short hint only. Never reveal the final answer or full solution/code.",
-            f"Level {self.hint_level}/5\nTitle: {q['title']}\n{q['prompt']}\nGive a nudge.",
-        )
-        self._append_chat("coach", (rich or local_hints[idx]).strip())
+        fallback = local_hints[idx]
+        self._append_chat("coach", "Thinking…")
+        level = self.hint_level
+
+        def work():
+            return openai_chat(
+                "Socratic coach. Short hint only. Never reveal the final answer or full solution/code.",
+                f"Level {level}/5\nTitle: {q['title']}\n{q['prompt']}\nGive a nudge.",
+            )
+
+        def done(rich, _err):
+            text = (rich or "").strip() or fallback
+            if text.startswith("(OpenAI unavailable"):
+                text = fallback
+            # Replace last "Thinking…" line if present
+            end = self.chat_buf.get_end_iter()
+            start = self.chat_buf.get_start_iter()
+            content = self.chat_buf.get_text(start, end, False)
+            if content.rstrip().endswith("coach: Thinking…"):
+                self.chat_buf.set_text(content.rsplit("coach: Thinking…", 1)[0])
+            self._append_chat("coach", text)
+
+        run_bg(work, done)
 
     def _on_chat(self, *_a) -> None:
         msg = self.chat_entry.get_text().strip()
@@ -457,26 +600,51 @@ class NativeLockApp(Gtk.Window):
             return
         self.chat_entry.set_text("")
         self._append_chat("you", msg)
+        self._append_chat("coach", "Thinking…")
         q = self.question
-        rich = openai_chat(
-            "Socratic interview coach. Hints only — never the final answer, option letter, or full code.",
-            f"Problem: {q['title']}\n{q['prompt']}\nUser: {msg}",
-        )
-        if not rich:
-            rich = "Re-state the invariant you need. What would O(n) look like vs O(n²)?"
-        self._append_chat("coach", rich.strip())
+
+        def work():
+            return openai_chat(
+                "Socratic interview coach. Hints only — never the final answer, option letter, or full code.",
+                f"Problem: {q['title']}\n{q['prompt']}\nUser: {msg}",
+            )
+
+        def done(rich, _err):
+            text = (rich or "").strip() or (
+                "Re-state the invariant you need. What would O(n) look like vs O(n²)?"
+            )
+            if text.startswith("(OpenAI unavailable"):
+                text = "Re-state the invariant you need. What would O(n) look like vs O(n²)?"
+            end = self.chat_buf.get_end_iter()
+            start = self.chat_buf.get_start_iter()
+            content = self.chat_buf.get_text(start, end, False)
+            if content.rstrip().endswith("coach: Thinking…"):
+                self.chat_buf.set_text(content.rsplit("coach: Thinking…", 1)[0])
+            self._append_chat("coach", text)
+
+        run_bg(work, done)
 
     def _on_bypass(self, *_a) -> None:
         key = self.bypass_entry.get_text().strip()
-        try:
-            api_json("POST", "/lock/bypass", {"key": key})
-            api_json("POST", "/retest/clear", {})
-            self._set_status("Bypass accepted.", True)
-            safe_restore()
-            self._ungrab()
-            Gtk.main_quit()
-        except Exception:
-            self._set_status("Bypass rejected — type the full key (paste blocked).", False)
+        if not key:
+            self._set_status("Type the bypass key first.", False)
+            return
+        self._set_status("Checking bypass…", None)
+
+        def work():
+            return bypass_ok(key)
+
+        def done(ok, _err):
+            if ok:
+                self._set_status("Bypass accepted.", True)
+                self._mark_gate_cleared("bypass")
+                safe_restore()
+                self._ungrab()
+                Gtk.main_quit()
+            else:
+                self._set_status("Bypass rejected — type the full key (paste blocked).", False)
+
+        run_bg(work, done)
 
     def _on_win_key(self, _w, event) -> bool:
         key = Gdk.keyval_name(event.keyval) or ""
@@ -496,15 +664,31 @@ class NativeLockApp(Gtk.Window):
         return False
 
     def _on_focus_out(self, *_a) -> bool:
-        GLib.idle_add(self._grab_input)
-        self.present()
+        if seat_grab_supported():
+            GLib.idle_add(self._grab_input)
+        try:
+            self.present()
+        except Exception:
+            pass
         return False
 
     def _on_map(self, *_a) -> bool:
-        GLib.idle_add(self._grab_input)
+        if seat_grab_supported():
+            GLib.idle_add(self._grab_input)
+        else:
+            self.grab_status.set_text(
+                "Wayland safe mode — no exclusive grab; shortcuts disabled; fullscreen"
+            )
         return False
 
     def _grab_input(self) -> bool:
+        if not seat_grab_supported():
+            self._grab_attempts = 99
+            self._grab_ok = False
+            self.grab_status.set_text(
+                "Wayland safe mode — no exclusive grab; shortcuts disabled; fullscreen"
+            )
+            return False
         display = self.get_display()
         if display is None:
             self.grab_status.set_text("Grab: no display")
@@ -516,26 +700,37 @@ class NativeLockApp(Gtk.Window):
         window = self.get_window()
         if window is None:
             return False
+        if self._grab_attempts >= 2 and not self._grab_ok:
+            self.grab_status.set_text(
+                "Input grab unavailable — shortcuts disabled; staying fullscreen"
+            )
+            return False
+        self._grab_attempts += 1
         caps = Gdk.SeatCapabilities.POINTER | Gdk.SeatCapabilities.KEYBOARD
-        status = seat.grab(
-            window,
-            caps,
-            False,  # owner_events
-            None,  # cursor
-            None,  # event
-            None,
-            None,
-        )
-        self._grab_ok = status == Gdk.GrabStatus.SUCCESS
-        # Wayland may return non-success; still keep keybinds disabled + fullscreen
+        try:
+            status = seat.grab(
+                window,
+                caps,
+                True,
+                None,
+                None,
+                None,
+                None,
+            )
+            self._grab_ok = status == Gdk.GrabStatus.SUCCESS
+        except Exception:
+            self._grab_ok = False
+        backend = os.environ.get("GDK_BACKEND", "?")
         self.grab_status.set_text(
-            "Input grab: ACTIVE (keyboard + mouse)"
+            f"Input grab: ACTIVE ({backend})"
             if self._grab_ok
-            else "Input grab: limited on this session (Wayland) — shortcuts still disabled; staying fullscreen"
+            else f"Input grab unavailable ({backend}) — shortcuts disabled; fullscreen"
         )
         return False
 
     def _ungrab(self) -> None:
+        if not self._grab_ok:
+            return
         display = self.get_display()
         if not display:
             return
@@ -545,50 +740,100 @@ class NativeLockApp(Gtk.Window):
                 seat.ungrab()
             except Exception:
                 pass
+        self._grab_ok = False
 
     def _tick_focus_and_grab(self) -> bool:
-        self.present()
-        self.set_keep_above(True)
         try:
-            self.fullscreen()
+            self.set_keep_above(True)
         except Exception:
             pass
-        if not self._grab_ok:
-            self._grab_input()
         try:
-            st = api_json("GET", "/lock/status")
+            if not self.is_active():
+                self.present()
+        except Exception:
+            pass
+        if seat_grab_supported() and not self._grab_ok and self._grab_attempts < 2:
+            self._grab_input()
+        return True
+
+    def _poll_unlock_status(self) -> bool:
+        if self._solved or self._status_poll_busy:
+            return True
+        self._status_poll_busy = True
+
+        def work():
+            return api_json("GET", "/lock/status", timeout=0.8)
+
+        def done(st, err):
+            self._status_poll_busy = False
+            if err or not st:
+                return
             if st.get("unlocked"):
+                self._mark_gate_cleared("remote-unlock")
                 safe_restore()
                 self._ungrab()
                 Gtk.main_quit()
-                return False
-        except Exception:
-            pass
+
+        run_bg(work, done)
         return True
 
 
-def main() -> int:
+def _parse_gate(argv: list[str]) -> str:
+    gate = os.environ.get("PREPDESK_GATE", "login")
+    if "--gate" in argv:
+        i = argv.index("--gate")
+        if i + 1 < len(argv):
+            gate = argv[i + 1]
+    return gate
+
+
+def _single_instance():
+    """Return an open lock file if we own the instance, else None."""
+    import fcntl
+
+    CONFIG.mkdir(parents=True, exist_ok=True)
+    lock_path = CONFIG / "native-lock.flock"
+    fh = open(lock_path, "w")
+    try:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        fh.close()
+        return None
+    fh.write(str(os.getpid()) + "\n")
+    fh.flush()
+    return fh
+
+
+def main(argv: list[str] | None = None) -> int:
     global _restored
     _restored = False
+    argv = list(argv if argv is not None else sys.argv[1:])
+    gate = _parse_gate(argv)
+
+    instance = _single_instance()
+    if instance is None:
+        print("PrepDesk lock already running", file=sys.stderr)
+        return 0
+
     backup = CONFIG / "keybinds-backup.json"
     if backup.exists():
         keybinds.restore()
 
     ensure_runner()
+    token = ""
     try:
-        armed = api_json("POST", "/lock/arm", {"source": "native-shell"})
-    except urllib.error.URLError:
-        print("Cannot reach PrepDesk API", file=sys.stderr)
-        return 1
-    token = armed.get("token") or ""
-    if not token:
-        print("No lock token", file=sys.stderr)
-        return 1
+        armed = api_json("POST", "/lock/arm", {"source": f"native-shell:{gate}"}, timeout=2.0)
+        token = armed.get("token") or ""
+    except Exception as e:
+        print(f"Lock API arm skipped ({e}); local unlock still works", file=sys.stderr)
 
     keybinds.snapshot_and_disable()
     atexit.register(safe_restore)
 
-    win = NativeLockApp(token)
+    backend = os.environ.get("GDK_BACKEND", "auto")
+    print(f"PrepDesk lock starting (gate={gate}, GDK_BACKEND={backend})", flush=True)
+
+    win = NativeLockApp(token, gate=gate)
     win.show_all()
 
     def _sig(_s, _f):
@@ -610,7 +855,11 @@ def main() -> int:
         Gtk.main()
     finally:
         safe_restore()
-    return 0
+        try:
+            instance.close()
+        except Exception:
+            pass
+    return 0 if win._solved or gate == "login" else 1
 
 
 if __name__ == "__main__":

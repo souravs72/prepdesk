@@ -46,18 +46,26 @@ export function LockPage() {
   const getLockQuestion = useProgress((s) => s.getLockQuestion)
   const [question] = useState(() => getLockQuestion())
   const [token] = useState(() => readToken())
+  const [gate] = useState(() => new URLSearchParams(window.location.search).get('gate') || 'login')
   const [bypass, setBypass] = useState('')
   const [bypassMsg, setBypassMsg] = useState('')
-  const [bypassLen, setBypassLen] = useState(0)
   const [unlockedMsg, setUnlockedMsg] = useState('')
   const [errorMsg, setErrorMsg] = useState('')
+  const [showBypass, setShowBypass] = useState(false)
+
+  const gateTitle =
+    gate === 'logout'
+      ? 'Log out'
+      : gate === 'reboot'
+        ? 'Reboot'
+        : gate === 'poweroff' || gate === 'shutdown'
+          ? 'Shut down'
+          : gate === 'suspend'
+            ? 'Suspend'
+            : 'Unlock'
 
   useEffect(() => {
     if (token) sessionStorage.setItem('prepdesk-lock-token', token)
-    void fetch(`${API}/lock/bypass-meta`)
-      .then((r) => r.json())
-      .then((d) => setBypassLen(d.length ?? 0))
-      .catch(() => {})
   }, [token])
 
   async function unlockSolved() {
@@ -71,11 +79,11 @@ export function LockPage() {
       body: JSON.stringify({ reason: 'solved', token }),
     })
     if (!res.ok) {
-      setErrorMsg('Unlock failed — open PrepDesk via prepdesk-lock (session token required).')
+      setErrorMsg('Unlock failed — relaunch with prepdesk-lock.')
       return
     }
     await fetch(`${API}/retest/clear`, { method: 'POST' }).catch(() => {})
-    setUnlockedMsg('Desktop unlocked. You can continue your session.')
+    setUnlockedMsg('Unlocked')
   }
 
   async function tryBypass() {
@@ -87,39 +95,23 @@ export function LockPage() {
       body: JSON.stringify({ key: bypass }),
     })
     if (!res.ok) {
-      setBypassMsg('Bypass rejected — type the full key manually (paste is blocked).')
+      setBypassMsg('Invalid key')
       return
     }
     await fetch(`${API}/retest/clear`, { method: 'POST' }).catch(() => {})
-    setUnlockedMsg('Bypass accepted. Unlocking…')
+    setUnlockedMsg('Unlocked')
   }
 
   return (
     <div className="grid-bg min-h-full p-6 md:p-10">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header className="space-y-2">
+      <div className="mx-auto max-w-3xl space-y-5">
+        <header className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            Desktop lock
+            PrepDesk
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight">Answer to unlock</h1>
-          <p className="max-w-2xl text-[var(--color-muted)]">
-            Shell disables Alt+Tab / overview / logout shortcuts while locked (restored on unlock).
-            Power-button hard shutdown still works. Use hint chat if stuck — no full answers.
-          </p>
-          {!token && (
-            <Card className="border-amber-500/40 text-[var(--color-warn)]">
-              No lock session token. Launch with <code className="font-mono">prepdesk-lock</code> so
-              unlock is authenticated.
-            </Card>
-          )}
-          {unlockedMsg && (
-            <Card className="border-emerald-500/40 bg-emerald-500/10 text-[var(--color-ok)]">
-              {unlockedMsg}
-            </Card>
-          )}
-          {errorMsg && (
-            <Card className="border-rose-500/40 text-[var(--color-danger)]">{errorMsg}</Card>
-          )}
+          <h1 className="text-2xl font-semibold tracking-tight">{gateTitle}</h1>
+          {unlockedMsg && <p className="text-sm text-[var(--color-ok)]">{unlockedMsg}</p>}
+          {errorMsg && <p className="text-sm text-[var(--color-danger)]">{errorMsg}</p>}
         </header>
 
         <QuestionPanel
@@ -130,26 +122,32 @@ export function LockPage() {
           }}
         />
 
-        <HintChat question={question} />
+        <HintChat question={question} compact />
 
-        <Card className="space-y-3">
-          <div className="text-sm font-medium">Emergency bypass</div>
-          <p className="text-xs text-[var(--color-muted)]">
-            Type the {bypassLen || '73'}-character key from{' '}
-            <code className="font-mono text-[var(--color-accent)]">~/.config/prepdesk/bypass.key</code>
-            . Paste disabled. TTY: <code className="font-mono">prepdesk-show-bypass</code>
-            {' '}· rotate: <code className="font-mono">prepdesk-rotate-bypass</code>.
-          </p>
-          <NoPasteInput
-            type="password"
-            value={bypass}
-            onChange={(e) => setBypass(e.target.value)}
-            placeholder="Type bypass key…"
-            className="w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2 font-mono text-sm outline-none ring-[var(--color-accent)] focus:ring-1"
-          />
-          <Button onClick={() => void tryBypass()}>Unlock with bypass</Button>
-          {bypassMsg && <p className="text-sm text-[var(--color-danger)]">{bypassMsg}</p>}
-        </Card>
+        <div className="pt-2">
+          {!showBypass ? (
+            <button
+              type="button"
+              onClick={() => setShowBypass(true)}
+              className="text-xs text-[var(--color-faint)] underline-offset-2 hover:text-[var(--color-muted)] hover:underline"
+            >
+              Emergency bypass
+            </button>
+          ) : (
+            <Card className="space-y-3">
+              <div className="text-sm font-medium">Bypass</div>
+              <NoPasteInput
+                type="password"
+                value={bypass}
+                onChange={(e) => setBypass(e.target.value)}
+                placeholder="Type bypass key…"
+                className="w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2 font-mono text-sm outline-none ring-[var(--color-accent)] focus:ring-1"
+              />
+              <Button onClick={() => void tryBypass()}>Unlock</Button>
+              {bypassMsg && <p className="text-sm text-[var(--color-danger)]">{bypassMsg}</p>}
+            </Card>
+          )}
+        </div>
       </div>
     </div>
   )

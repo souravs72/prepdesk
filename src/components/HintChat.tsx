@@ -7,14 +7,18 @@ const API = 'http://127.0.0.1:4789'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
-export function HintChat({ question }: { question: Question }) {
-  const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: 'assistant',
-      content:
-        'Stuck? Ask for a nudge. I’ll steer your thinking — I won’t give the final answer or full code.',
-    },
-  ])
+export function HintChat({ question, compact = false }: { question: Question; compact?: boolean }) {
+  const [messages, setMessages] = useState<Msg[]>(
+    compact
+      ? []
+      : [
+          {
+            role: 'assistant',
+            content:
+              'Stuck? Ask for a nudge. I’ll steer your thinking — I won’t give the final answer or full code.',
+          },
+        ],
+  )
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -36,13 +40,16 @@ export function HintChat({ question }: { question: Question }) {
         }),
       })
       const data = await res.json()
-      setMessages((m) => [...m, { role: 'assistant', content: data.reply || 'Try breaking the problem into smaller checks.' }])
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', content: data.reply || 'Try breaking the problem into smaller checks.' },
+      ])
     } catch {
       setMessages((m) => [
         ...m,
         {
           role: 'assistant',
-          content: 'Hint service offline — name the pattern you think applies, then what would be O(n) vs O(n²).',
+          content: 'Hint service offline — name the pattern, then compare O(n) vs O(n²).',
         },
       ])
     } finally {
@@ -52,27 +59,35 @@ export function HintChat({ question }: { question: Question }) {
 
   return (
     <Card className="space-y-3">
-      <div className="text-sm font-medium">Hint chat</div>
-      <p className="text-xs text-[var(--color-muted)]">
-        Progressive hints only — no spoilers, no full solutions. Uses your daily-work-digest OpenAI key when available.
-      </p>
-      <div className="max-h-64 space-y-2 overflow-y-auto rounded-xl bg-[var(--color-elevated)] p-3">
-        {messages.map((m, i) => (
-          <div
-            key={`${i}-${m.role}`}
-            className={`text-sm leading-relaxed ${
-              m.role === 'assistant' ? 'text-[var(--color-muted)]' : 'text-[var(--color-ink)]'
-            }`}
-          >
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-accent)]">
-              {m.role === 'assistant' ? 'coach' : 'you'}
-            </span>
-            <div className="mt-0.5">
-              {m.role === 'assistant' ? <MarkdownBody content={m.content} /> : m.content}
-            </div>
-          </div>
-        ))}
-      </div>
+      <div className="text-sm font-medium">Hints</div>
+      {!compact && (
+        <p className="text-xs text-[var(--color-muted)]">
+          Progressive hints only — no spoilers, no full solutions.
+        </p>
+      )}
+      {(messages.length > 0 || !compact) && (
+        <div className="max-h-48 space-y-2 overflow-y-auto rounded-xl bg-[var(--color-elevated)] p-3">
+          {messages.length === 0 ? (
+            <p className="text-sm text-[var(--color-faint)]">Ask for a nudge if stuck.</p>
+          ) : (
+            messages.map((m, i) => (
+              <div
+                key={`${i}-${m.role}`}
+                className={`text-sm leading-relaxed ${
+                  m.role === 'assistant' ? 'text-[var(--color-muted)]' : 'text-[var(--color-ink)]'
+                }`}
+              >
+                <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--color-accent)]">
+                  {m.role === 'assistant' ? 'coach' : 'you'}
+                </span>
+                <div className="mt-0.5">
+                  {m.role === 'assistant' ? <MarkdownBody content={m.content} /> : m.content}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
       <div className="flex gap-2">
         <input
           value={input}
@@ -80,7 +95,7 @@ export function HintChat({ question }: { question: Question }) {
           onKeyDown={(e) => {
             if (e.key === 'Enter') void send()
           }}
-          placeholder="e.g. I’m stuck on how to start…"
+          placeholder="Ask for a nudge…"
           className="min-w-0 flex-1 rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2 text-sm outline-none ring-[var(--color-accent)] focus:ring-1"
         />
         <Button disabled={busy || !input.trim()} onClick={() => void send()}>
