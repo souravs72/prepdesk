@@ -10,7 +10,15 @@ export function normalizeAnswer(s: string): string {
 
 export function gradeObjective(q: Question, answer: string): boolean {
   const u = normalizeAnswer(answer)
-  return (q.acceptedAnswers ?? []).some((a) => normalizeAnswer(a) === u)
+  if (!u) return false
+  const accepted = q.acceptedAnswers ?? []
+  if (accepted.some((a) => normalizeAnswer(a) === u)) return true
+  // Concept answers: allow "the range is empty" to match accepted "empty"
+  return accepted.some((a) => {
+    const n = normalizeAnswer(a)
+    if (n.length < 3) return false
+    return u.includes(n) || n.includes(u)
+  })
 }
 
 export function gradeMcq(q: Question, optionId: string): boolean {

@@ -325,10 +325,14 @@ def _builders() -> list[Builder]:
         "Partner is complement T−x.", "Looking up x again finds no partner.", time="O(n)", space="O(n)"))
 
     b.append(lambda: _obj(
-        "obj-bs-exit", "dsa", "binary-search", "easy", "Binary search exit",
-        "Inclusive lo/hi binary search; target absent → exit when? (e.g. lo > hi)",
-        ["lo > hi", "lo>hi", "low > high", "left > right"],
-        "Empty range when lo crosses hi.", "lo==hi can still be a valid probe.", time="O(log n)"))
+        "obj-bs-exit", "dsa", "binary-search", "easy", "Binary search miss",
+        "Inclusive [low, high] binary search; target absent — what is true of the range when the loop stops? (empty / bounds crossed)",
+        [
+            "empty", "empty range", "the range is empty", "bounds crossed", "bounds cross",
+            "low crosses high", "low > high", "lo > hi", "left > right", "start > end",
+            "interval empty", "no elements left",
+        ],
+        "Empty range when bounds cross.", "A single remaining index can still be probed.", time="O(log n)"))
 
     b.append(lambda: _obj(
         "obj-two-ptr-hi", "dsa", "two-pointers", "medium", "Sorted two-sum move",

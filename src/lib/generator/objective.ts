@@ -31,9 +31,17 @@ const TEMPLATES: ObjTemplate[] = [
       const n = rng.int(6, 10)
       return {
         title: 'Second-largest in one pass',
-        prompt: `You must find the second-largest distinct value in an unsorted array of ${n} ints in a single O(n) pass with O(1) extra space. Which two variables do you typically maintain? Answer like: max, secondMax`,
-        answer: 'max, secondmax',
-        accepted: ['max, secondmax', 'max, second max', 'largest, second largest', 'max1, max2'],
+        prompt: `You must find the second-largest distinct value in an unsorted array of ${n} ints in a single O(n) pass with O(1) extra space. What two running values do you keep while scanning?`,
+        answer: 'largest and second-largest',
+        accepted: [
+          'largest and second-largest',
+          'max and second max',
+          'max, secondmax',
+          'max, second max',
+          'largest, second largest',
+          'max1, max2',
+          'first max and second max',
+        ],
         whyCorrect:
           'Track the best and second-best while scanning once; when you see a new max, demote the old max to second.',
         whyIncorrect:
@@ -72,17 +80,32 @@ const TEMPLATES: ObjTemplate[] = [
     topic: 'binary-search',
     level: 'easy',
     build: () => ({
-      title: 'Binary search loop invariant',
+      title: 'Binary search miss condition',
       prompt:
-        'In iterative binary search on a sorted array with lo, hi inclusive, when the target is absent, the loop exits when which relation holds? Answer like: lo > hi',
-      answer: 'lo > hi',
-      accepted: ['lo > hi', 'lo>hi', 'low > high', 'left > right'],
-      whyCorrect: 'Each step shrinks [lo, hi]; when the empty range is reached, lo has crossed hi.',
-      whyIncorrect: 'lo == hi can still be a valid single-element probe; exit is after that miss.',
+        'Iterative binary search maintains an inclusive search range [low, high]. If the target is not in the array, what is true of that range when the loop finally stops? (concept — not variable names)',
+      answer: 'empty / bounds crossed',
+      accepted: [
+        'empty',
+        'empty range',
+        'the range is empty',
+        'bounds crossed',
+        'bounds cross',
+        'low crosses high',
+        'low > high',
+        'lo > hi',
+        'left > right',
+        'start > end',
+        'interval empty',
+        'no elements left',
+      ],
+      whyCorrect:
+        'Each step shrinks the inclusive range. When nothing remains to probe, the low bound has crossed the high bound — the interval is empty.',
+      whyIncorrect:
+        'A single remaining index (low == high) is still a valid probe. Absence is decided only after that cell misses and the range becomes empty.',
       timeComplexity: 'O(log n)',
       spaceComplexity: 'O(1)',
-      pitfalls: ['Off-by-one when using mid±1 incorrectly', 'Overflow in (lo+hi)/2'],
-      alternatives: ['lower_bound style half-open intervals'],
+      pitfalls: ['Off-by-one when using mid±1 incorrectly', 'Overflow in (low+high)/2'],
+      alternatives: ['Half-open [low, high) / lower_bound style loops'],
       followUps: ['First occurrence with duplicates?', 'Search in rotated array?'],
       tags: ['binary-search'],
     }),
@@ -94,9 +117,9 @@ const TEMPLATES: ObjTemplate[] = [
     build: () => ({
       title: 'Sorted two-sum pointers',
       prompt:
-        'On a sorted array, two pointers start at both ends. If a[lo]+a[hi] is too large vs target, which pointer moves? Answer: lo or hi',
-      answer: 'hi',
-      accepted: ['hi', 'high', 'right', 'end'],
+        'On a sorted array, two pointers start at both ends. If a[left]+a[right] is larger than the target, which end do you move inward — the left pointer or the right pointer?',
+      answer: 'right',
+      accepted: ['right', 'hi', 'high', 'end', 'the right one', 'right pointer'],
       whyCorrect: 'Sum too large → decrease the larger end (move hi left). Too small → move lo right.',
       whyIncorrect: 'Moving lo when the sum is already too large usually increases the sum further.',
       timeComplexity: 'O(n)',
@@ -114,7 +137,7 @@ const TEMPLATES: ObjTemplate[] = [
     build: () => ({
       title: 'Parentheses stack discipline',
       prompt:
-        'Valid parentheses matching uses which order discipline for openers? Answer with the 4-letter acronym (e.g. FIFO or LIFO).',
+        'Valid parentheses matching closes brackets in which order relative to when they were opened — FIFO or LIFO?',
       answer: 'lifo',
       accepted: ['lifo', 'LIFO'],
       whyCorrect: 'The most recently opened bracket must close first — classic LIFO / stack.',

@@ -22,6 +22,9 @@ export function isBogusQuestion(q: Pick<Question, 'title' | 'prompt' | 'kind'>):
   // Tiny arithmetic / look-up with no concept
   if (q.kind === 'objective' && /array\s*\[[^\]]{0,40}\]\s*[—-]\s*what is the maximum/i.test(q.prompt))
     return true
+  // Spoiler: "Answer like: <the exact answer>"
+  if (/answer like:\s*.+/i.test(q.prompt) || /answer:\s*(lo|hi|fifo|lifo)\b/i.test(q.prompt))
+    return true
   return false
 }
 
