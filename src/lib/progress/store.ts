@@ -121,7 +121,7 @@ export const useProgress = create<ProgressState>()(
           return {
             ok: false,
             reason:
-              'Finish answering every question in this batch before regenerating. Progress is frozen until then.',
+              'Finish this batch first.',
           }
         }
         const qs = generatePracticeBatch(filters, `practice:${Date.now()}`, genCtx(get))

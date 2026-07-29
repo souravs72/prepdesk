@@ -27,7 +27,7 @@ export function PracticePage() {
       count: 10,
     })
     if (!res.ok) {
-      setMsg(res.reason ?? 'Cannot regenerate yet')
+      setMsg(res.reason ?? 'Finish batch first.')
       return
     }
     setMsg('')
@@ -36,15 +36,14 @@ export function PracticePage() {
   }
 
   return (
-    <div className="mx-auto h-full max-w-6xl space-y-6 overflow-auto p-8">
-      <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-          Practice
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Filter. Generate. Drill.</h1>
-        <p className="mt-2 text-[var(--color-muted)]">
-          A batch is frozen until every question is answered. No skipping via regenerate.
-        </p>
+    <div className="mx-auto h-full max-w-6xl space-y-4 overflow-auto p-5">
+      <header className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight">Practice</h1>
+        {batch.length > 0 && (
+          <span className="font-mono text-sm tabular-nums text-[var(--color-muted)]">
+            {answeredCount}/{batch.length}
+          </span>
+        )}
       </header>
 
       <Card className="grid gap-3 md:grid-cols-4">
@@ -95,9 +94,9 @@ export function PracticePage() {
             <option value="networking">Networking</option>
           </select>
         </label>
-        <div className="flex items-end">
+        <div className="flex items-end" title={frozen ? 'Finish batch first' : undefined}>
           <Button className="w-full" disabled={frozen} onClick={regenerate}>
-            {frozen ? `Answered ${answeredCount}/${batch.length}` : 'Generate 10'}
+            Generate
           </Button>
         </div>
       </Card>
@@ -106,17 +105,18 @@ export function PracticePage() {
 
       {batch.length > 0 && (
         <>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-1.5">
             {batch.map((q, i) => (
               <button
                 key={q.id}
                 type="button"
                 onClick={() => setIdx(i)}
-                className={`rounded-lg border px-2 py-1 text-xs ${
+                title={q.title}
+                className={`rounded-lg border px-2.5 py-1 font-mono text-xs ${
                   i === idx ? 'border-[var(--color-accent)]' : 'border-[var(--color-line)]'
                 }`}
               >
-                {i + 1}. {q.title}
+                {i + 1}
                 {answeredIds.includes(q.id) ? ' ✓' : ''}
               </button>
             ))}

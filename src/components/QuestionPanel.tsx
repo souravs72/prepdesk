@@ -42,7 +42,6 @@ export function QuestionPanel({
   const [hintLevel, setHintLevel] = useState(0)
   const [hint, setHint] = useState('')
   const [aiMarkdown, setAiMarkdown] = useState('')
-  const [aiSource, setAiSource] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
 
   const ide = variant === 'ide' && question.kind === 'coding' && !lockMode
@@ -57,7 +56,6 @@ export function QuestionPanel({
     setHintLevel(0)
     setHint('')
     setAiMarkdown('')
-    setAiSource('')
     const starter = question.coding?.starterCode.python ?? ''
     const saved = drafts[question.id]?.python ?? starter
     setLang('python')
@@ -79,7 +77,6 @@ export function QuestionPanel({
   async function fetchExplanation(ok: boolean, userAnswer?: string) {
     if (lockMode && !ok) {
       setAiMarkdown('')
-      setAiSource('lock')
       return
     }
     setAiLoading(true)
@@ -97,10 +94,8 @@ export function QuestionPanel({
       })
       const data = await res.json()
       setAiMarkdown(data.markdown || '')
-      setAiSource(data.source || 'local')
     } catch {
       setAiMarkdown(feedback.map((f) => `## ${f.title}\n${f.body}`).join('\n\n'))
-      setAiSource('local')
     } finally {
       setAiLoading(false)
     }
@@ -154,48 +149,36 @@ export function QuestionPanel({
     <div className="flex flex-wrap items-center gap-2">
       <DiffBadge d={question.difficulty} />
       <Badge>{TOPIC_LABEL[question.topic]}</Badge>
-      {!lockMode && <Badge tone="accent">{question.company}</Badge>}
-      <Badge>{question.kind}</Badge>
-      {lockMode && <Badge tone="warn">locked</Badge>}
-      {!lockMode && (
-        <>
-          <Badge>~{question.estimatedMinutes}m</Badge>
-          <Badge>freq {question.interviewFrequency}</Badge>
-        </>
+      {!lockMode && question.company !== 'General' && (
+        <Badge tone="accent">{question.company}</Badge>
       )}
     </div>
   )
 
   const codingBrief = question.coding && (
-    <div className="space-y-4 text-sm text-[var(--color-muted)]">
+    <div className="space-y-3 text-sm text-[var(--color-muted)]">
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-faint)]">
-          Constraints
-        </div>
-        <ul className="mt-1.5 list-disc space-y-0.5 pl-5">
+        <div className="mb-1 text-xs font-medium text-[var(--color-faint)]">Constraints</div>
+        <ul className="list-disc space-y-0.5 pl-5">
           {question.coding.constraints.map((c) => (
             <li key={c}>{c}</li>
           ))}
         </ul>
       </div>
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-faint)]">
-          I/O
-        </div>
-        <pre className="mt-1.5 overflow-auto rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] p-3 font-mono text-xs">
+        <div className="mb-1 text-xs font-medium text-[var(--color-faint)]">I/O</div>
+        <pre className="overflow-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-elevated)] p-2.5 font-mono text-xs">
           {question.coding.inputFormat}
           {'\n---\n'}
           {question.coding.outputFormat}
         </pre>
       </div>
       <div>
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-faint)]">
-          Samples
-        </div>
+        <div className="mb-1 text-xs font-medium text-[var(--color-faint)]">Samples</div>
         {question.coding.samples.map((s) => (
           <pre
             key={s.id}
-            className="mt-2 overflow-auto rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] p-3 font-mono text-xs"
+            className="mt-1.5 overflow-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-elevated)] p-2.5 font-mono text-xs"
           >
             {s.name}
             {'\n'}INPUT:{'\n'}
@@ -212,11 +195,11 @@ export function QuestionPanel({
     <>
       {runMsg && <p className="text-sm text-[var(--color-muted)]">{runMsg}</p>}
       {!!runs.length && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {runs.map((r) => (
             <div
               key={r.id}
-              className={`rounded-xl border px-3 py-2 font-mono text-xs ${
+              className={`rounded-lg border px-2.5 py-1.5 font-mono text-xs ${
                 r.passed
                   ? 'border-emerald-500/30 text-[var(--color-ok)]'
                   : 'border-rose-500/30 text-[var(--color-danger)]'
@@ -235,69 +218,55 @@ export function QuestionPanel({
         </div>
       )}
       {hint && (
-        <Card className="bg-[var(--color-elevated)] text-sm text-[var(--color-muted)]">
-          <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
-            Coach
-          </div>
-          <pre className="whitespace-pre-wrap font-sans">{hint}</pre>
-        </Card>
+        <pre className="whitespace-pre-wrap rounded-lg bg-[var(--color-elevated)] p-2.5 font-sans text-sm text-[var(--color-muted)]">
+          {hint}
+        </pre>
       )}
     </>
   )
 
   const feedbackBlock = (
-    <div className={lockMode && !submitted ? 'hidden' : 'space-y-3'}>
+    <div className={lockMode && !submitted ? 'hidden' : 'space-y-2'}>
       <AnimatePresence>
         {submitted && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-3"
+            className="space-y-2"
           >
-            <Card
-              className={
+            <div
+              className={`rounded-xl border px-3 py-2 ${
                 correct
                   ? 'border-emerald-500/40 bg-emerald-500/5'
                   : 'border-rose-500/40 bg-rose-500/5'
-              }
+              }`}
             >
-              <div className="text-lg font-semibold">{correct ? 'Correct' : 'Not quite'}</div>
+              <div className="font-semibold">{correct ? 'Correct' : 'Wrong'}</div>
               {!correct && feedback[0] && (
                 <p className="mt-1 text-sm text-[var(--color-muted)]">{feedback[0].body}</p>
               )}
-              {lockMode && !correct && (
-                <p className="mt-2 text-xs text-[var(--color-faint)]">Try again or ask for a hint.</p>
-              )}
-            </Card>
+            </div>
 
             {correct && aiLoading && (
-              <Card>
-                <p className="text-sm text-[var(--color-muted)]">Writing explanation…</p>
-              </Card>
+              <p className="text-sm text-[var(--color-muted)]">…</p>
             )}
 
             {correct && aiMarkdown && (
-              <Card>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
-                    Explanation
-                  </div>
-                  {!lockMode && <Badge tone="accent">{aiSource}</Badge>}
-                </div>
+              <div className="rounded-xl border border-[var(--color-line)] p-3">
                 <MarkdownBody content={aiMarkdown} />
-              </Card>
+              </div>
             )}
 
-            {correct &&
-              !aiMarkdown &&
-              feedback.map((f) => (
-                <Card key={f.title}>
-                  <div className="text-xs font-semibold uppercase tracking-wider text-[var(--color-accent)]">
-                    {f.title}
+            {correct && !aiMarkdown && feedback.length > 0 && (
+              <div className="space-y-2 rounded-xl border border-[var(--color-line)] p-3 text-sm">
+                {feedback.map((f) => (
+                  <div key={f.title}>
+                    <span className="font-medium text-[var(--color-ink)]">{f.title}</span>
+                    <p className="mt-0.5 text-[var(--color-muted)]">{f.body}</p>
                   </div>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--color-muted)]">{f.body}</p>
-                </Card>
-              ))}
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -328,9 +297,9 @@ export function QuestionPanel({
         ))}
         <div className="ml-auto flex flex-wrap gap-2">
           <Button variant="ghost" onClick={() => void onRun(false)}>
-            Run samples
+            Run
           </Button>
-          <Button onClick={() => void onRun(true)}>Submit all tests</Button>
+          <Button onClick={() => void onRun(true)}>Submit</Button>
           <Button
             variant="ghost"
             onClick={() => {
@@ -448,7 +417,7 @@ export function QuestionPanel({
             ))}
             {!submitted && (
               <Button disabled={!choice} onClick={() => finish(gradeMcq(question, choice!), choice)}>
-                Submit answer
+                Submit
               </Button>
             )}
             {submitted && !correct && (
@@ -465,7 +434,7 @@ export function QuestionPanel({
               value={text}
               disabled={submitted && correct}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Type your answer"
+              placeholder="Answer"
               className="w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2 outline-none ring-[var(--color-accent)] focus:ring-1"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && text && !(submitted && correct))
@@ -474,7 +443,7 @@ export function QuestionPanel({
             />
             {!submitted && (
               <Button disabled={!text.trim()} onClick={() => finish(gradeObjective(question, text), text)}>
-                Submit answer
+                Submit
               </Button>
             )}
             {submitted && !correct && (

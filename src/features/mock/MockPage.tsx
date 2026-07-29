@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { QuestionPanel } from '../../components/QuestionPanel'
-import { Button, Card } from '../../components/ui'
+import { Button } from '../../components/ui'
 import { generatePracticeBatch } from '../../lib/generator'
 import { useProgress } from '../../lib/progress/store'
 import type { Question } from '../../types/question'
@@ -46,24 +46,17 @@ export function MockPage() {
   const ss = String(seconds % 60).padStart(2, '0')
 
   return (
-    <div className="mx-auto h-full max-w-6xl space-y-6 overflow-auto p-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            Mock interview
-          </p>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight">45 minutes. Five questions.</h1>
+    <div className="mx-auto h-full max-w-6xl space-y-4 overflow-auto p-5">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-baseline gap-3">
+          <h1 className="text-xl font-semibold tracking-tight">Mock</h1>
+          <span className="text-sm text-[var(--color-muted)]">5 · 45m</span>
         </div>
-        {!running && !done && <Button onClick={start}>Start mock</Button>}
+        {!running && !done && <Button onClick={start}>Start</Button>}
         {(running || done) && (
-          <Card>
-            <div className="font-mono text-2xl tabular-nums">
-              {mm}:{ss}
-            </div>
-            <div className="text-xs text-[var(--color-muted)]">
-              score {score}/{qs.length}
-            </div>
-          </Card>
+          <div className="font-mono text-sm tabular-nums text-[var(--color-muted)]">
+            {mm}:{ss} · {score}/{qs.length}
+          </div>
         )}
       </header>
 
@@ -80,14 +73,12 @@ export function MockPage() {
       )}
 
       {done && (
-        <Card className="space-y-3">
-          <h2 className="text-xl font-semibold">Session feedback</h2>
-          <p className="text-[var(--color-muted)]">
-            You scored {score}/{qs.length}. Review each explanation in Practice, then re-drill weak
-            topics from Analytics.
+        <div className="flex items-center gap-4">
+          <p className="font-mono text-lg tabular-nums">
+            {score}/{qs.length}
           </p>
-          <Button onClick={start}>Run another mock</Button>
-        </Card>
+          <Button onClick={start}>Again</Button>
+        </div>
       )}
     </div>
   )

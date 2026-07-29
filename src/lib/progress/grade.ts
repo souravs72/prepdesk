@@ -35,17 +35,16 @@ export function buildFeedback(
   const lines: { title: string; body: string }[] = []
 
   if (!correct) {
-    // Wrong answers stay short — one reason only.
     if (q.kind === 'mcq' && selectedId) {
       const opt = q.options?.find((o) => o.id === selectedId)
       lines.push({
-        title: 'Why not',
-        body: opt?.whyWrong || q.explanation.whyIncorrect || 'That option is incorrect.',
+        title: 'Why',
+        body: opt?.whyWrong || q.explanation.whyIncorrect || 'Wrong option.',
       })
     } else {
       lines.push({
-        title: 'Why not',
-        body: q.explanation.whyIncorrect || 'That does not match the expected answer.',
+        title: 'Why',
+        body: q.explanation.whyIncorrect || 'Incorrect.',
       })
     }
     return lines
@@ -60,12 +59,5 @@ export function buildFeedback(
     lines.push({ title: 'Space', body: q.explanation.spaceComplexity })
   if (q.explanation.pitfalls.length)
     lines.push({ title: 'Pitfalls', body: q.explanation.pitfalls.join(' · ') })
-  if (q.explanation.alternatives.length)
-    lines.push({ title: 'Alternatives', body: q.explanation.alternatives.join(' · ') })
-  if (q.explanation.followUps.length)
-    lines.push({ title: 'Follow-ups', body: q.explanation.followUps.join(' · ') })
-  if (q.coding) {
-    lines.push({ title: 'Approach', body: q.coding.optimized })
-  }
   return lines
 }

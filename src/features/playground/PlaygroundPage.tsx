@@ -30,7 +30,7 @@ export function PlaygroundPage() {
 
   function nextProblem() {
     if (!answered) {
-      setMsg('Submit this problem before generating a new one.')
+      setMsg('Submit first')
       return
     }
     setMsg('')
@@ -39,32 +39,18 @@ export function PlaygroundPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)]/80 px-5 py-3 backdrop-blur">
+      <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-[var(--color-line)] bg-[var(--color-panel)]/80 px-4 py-2">
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-              Playground
-            </p>
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                runnerOk
-                  ? 'bg-emerald-500/15 text-[var(--color-ok)]'
-                  : 'bg-amber-500/15 text-[var(--color-warn)]'
-              }`}
-            >
-              runner {runnerOk ? 'online' : 'offline'}
-            </span>
-          </div>
-          <h1 className="truncate text-lg font-semibold tracking-tight">{question.title}</h1>
+          <h1 className="truncate text-base font-semibold tracking-tight">{question.title}</h1>
           {msg && <p className="text-xs text-[var(--color-warn)]">{msg}</p>}
           {!runnerOk && (
-            <p className="text-xs text-[var(--color-muted)]">
-              Start the local runner: <code className="text-[var(--color-accent)]">npm run runner</code>
+            <p className="text-xs text-[var(--color-warn)]">
+              <code>npm run runner</code>
             </p>
           )}
         </div>
         <Button disabled={!answered} onClick={nextProblem}>
-          {answered ? 'Next problem' : 'Answer current first'}
+          Next
         </Button>
       </header>
       <div className="min-h-0 flex-1">

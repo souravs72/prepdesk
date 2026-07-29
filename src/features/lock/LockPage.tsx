@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { QuestionPanel } from '../../components/QuestionPanel'
 import { HintChat } from '../../components/HintChat'
-import { Button, Card } from '../../components/ui'
+import { Button } from '../../components/ui'
 import { useProgress } from '../../lib/progress/store'
 
 const API = 'http://127.0.0.1:4789'
@@ -79,7 +79,7 @@ export function LockPage() {
       body: JSON.stringify({ reason: 'solved', token }),
     })
     if (!res.ok) {
-      setErrorMsg('Unlock failed — relaunch with prepilo-lock.')
+      setErrorMsg('Unlock failed. Relaunch lock.')
       return
     }
     await fetch(`${API}/retest/clear`, { method: 'POST' }).catch(() => {})
@@ -103,15 +103,12 @@ export function LockPage() {
   }
 
   return (
-    <div className="grid-bg min-h-full p-6 md:p-10">
-      <div className="mx-auto max-w-3xl space-y-5">
-        <header className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-            Prepilo
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">{gateTitle}</h1>
-          {unlockedMsg && <p className="text-sm text-[var(--color-ok)]">{unlockedMsg}</p>}
-          {errorMsg && <p className="text-sm text-[var(--color-danger)]">{errorMsg}</p>}
+    <div className="grid-bg min-h-full p-5 md:p-8">
+      <div className="mx-auto max-w-3xl space-y-4">
+        <header>
+          <h1 className="text-xl font-semibold tracking-tight">{gateTitle}</h1>
+          {unlockedMsg && <p className="mt-1 text-sm text-[var(--color-ok)]">{unlockedMsg}</p>}
+          {errorMsg && <p className="mt-1 text-sm text-[var(--color-danger)]">{errorMsg}</p>}
         </header>
 
         <QuestionPanel
@@ -124,28 +121,27 @@ export function LockPage() {
 
         <HintChat question={question} compact />
 
-        <div className="pt-2">
+        <div>
           {!showBypass ? (
             <button
               type="button"
               onClick={() => setShowBypass(true)}
               className="text-xs text-[var(--color-faint)] underline-offset-2 hover:text-[var(--color-muted)] hover:underline"
             >
-              Emergency bypass
+              Bypass
             </button>
           ) : (
-            <Card className="space-y-3">
-              <div className="text-sm font-medium">Bypass</div>
+            <div className="flex flex-wrap gap-2">
               <NoPasteInput
                 type="password"
                 value={bypass}
                 onChange={(e) => setBypass(e.target.value)}
-                placeholder="Type bypass key…"
-                className="w-full rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2 font-mono text-sm outline-none ring-[var(--color-accent)] focus:ring-1"
+                placeholder="Bypass key"
+                className="min-w-[12rem] flex-1 rounded-xl border border-[var(--color-line)] bg-[var(--color-elevated)] px-3 py-2 font-mono text-sm outline-none ring-[var(--color-accent)] focus:ring-1"
               />
               <Button onClick={() => void tryBypass()}>Unlock</Button>
-              {bypassMsg && <p className="text-sm text-[var(--color-danger)]">{bypassMsg}</p>}
-            </Card>
+              {bypassMsg && <p className="w-full text-sm text-[var(--color-danger)]">{bypassMsg}</p>}
+            </div>
           )}
         </div>
       </div>

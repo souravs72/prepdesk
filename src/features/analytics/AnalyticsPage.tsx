@@ -28,29 +28,30 @@ export function AnalyticsPage() {
       .catch(() => {})
   }, [attempts.length])
 
+  const retestDue = retest.dueAtIso
+    ? new Date(retest.dueAtIso).toLocaleString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : ''
+
   return (
-    <div className="mx-auto h-full max-w-6xl space-y-6 overflow-auto p-8">
+    <div className="mx-auto h-full max-w-6xl space-y-4 overflow-auto p-5">
       <header>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-          Analytics
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Know your edges.</h1>
-        <p className="mt-2 text-sm text-[var(--color-muted)]">
-          Persisted under ~/.config/prepilo/analytics.json. Below 80% rolling accuracy schedules a
-          retest in ~4.5 hours.
-        </p>
+        <h1 className="text-xl font-semibold tracking-tight">Analytics</h1>
       </header>
 
       {retest.dueAtIso && (
         <Card className="border-amber-500/30">
-          <div className="text-sm font-medium text-[var(--color-warn)]">Retest scheduled</div>
-          <p className="mt-1 text-sm text-[var(--color-muted)]">
-            {retest.reason} (rolling {retest.accuracy}%). Due {retest.dueAtIso}
-          </p>
+          <div className="text-sm text-[var(--color-warn)]">
+            Retest · {retest.accuracy}% · {retestDue}
+          </div>
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
           ['Attempted', stats.total],
           ['Solved', stats.solved],
@@ -59,15 +60,15 @@ export function AnalyticsPage() {
         ].map(([k, v]) => (
           <Card key={k as string}>
             <div className="text-xs text-[var(--color-muted)]">{k}</div>
-            <div className="mt-2 text-3xl font-semibold tabular-nums">{v}</div>
+            <div className="mt-1 text-2xl font-semibold tabular-nums">{v}</div>
           </Card>
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-3">
         <Card>
-          <h3 className="font-semibold">By difficulty</h3>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
+          <h3 className="text-sm font-medium">Difficulty</h3>
+          <ul className="mt-2 space-y-1.5 text-sm text-[var(--color-muted)]">
             {Object.entries(stats.byDifficulty || {}).map(([k, v]) => (
               <li key={k} className="flex justify-between font-mono text-xs">
                 <span>{k}</span>
@@ -79,8 +80,8 @@ export function AnalyticsPage() {
           </ul>
         </Card>
         <Card>
-          <h3 className="font-semibold">By type</h3>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
+          <h3 className="text-sm font-medium">Type</h3>
+          <ul className="mt-2 space-y-1.5 text-sm text-[var(--color-muted)]">
             {Object.entries(stats.byKind || {}).map(([k, v]) => (
               <li key={k} className="flex justify-between font-mono text-xs">
                 <span>{k}</span>
@@ -92,8 +93,8 @@ export function AnalyticsPage() {
           </ul>
         </Card>
         <Card>
-          <h3 className="font-semibold">Disk snapshot (topics)</h3>
-          <ul className="mt-3 max-h-48 space-y-2 overflow-auto text-sm text-[var(--color-muted)]">
+          <h3 className="text-sm font-medium">Topics</h3>
+          <ul className="mt-2 max-h-48 space-y-1.5 overflow-auto text-sm text-[var(--color-muted)]">
             {Object.entries(disk.byTopic || {}).map(([k, v]) => (
               <li key={k} className="flex justify-between font-mono text-xs">
                 <span>{TOPIC_LABEL[k as keyof typeof TOPIC_LABEL] ?? k}</span>
@@ -102,20 +103,20 @@ export function AnalyticsPage() {
                 </span>
               </li>
             ))}
-            {!Object.keys(disk.byTopic || {}).length && <li>No disk analytics yet.</li>}
+            {!Object.keys(disk.byTopic || {}).length && <li>No data</li>}
           </ul>
         </Card>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <Card>
-          <h3 className="font-semibold">Weak topics</h3>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
-            {stats.weak.length === 0 && <li>Attempt more questions to unlock signals.</li>}
+          <h3 className="text-sm font-medium">Weak</h3>
+          <ul className="mt-2 space-y-1.5 text-sm text-[var(--color-muted)]">
+            {stats.weak.length === 0 && <li>No data</li>}
             {stats.weak.map((t) => (
               <li key={t.topic} className="flex justify-between">
                 <span>{TOPIC_LABEL[t.topic as keyof typeof TOPIC_LABEL] ?? t.topic}</span>
-                <span className="font-mono">
+                <span className="font-mono text-xs">
                   {Math.round(t.rate * 100)}% · {t.n}
                 </span>
               </li>
@@ -123,13 +124,13 @@ export function AnalyticsPage() {
           </ul>
         </Card>
         <Card>
-          <h3 className="font-semibold">Strong topics</h3>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
-            {stats.strong.length === 0 && <li>No data yet.</li>}
+          <h3 className="text-sm font-medium">Strong</h3>
+          <ul className="mt-2 space-y-1.5 text-sm text-[var(--color-muted)]">
+            {stats.strong.length === 0 && <li>No data</li>}
             {stats.strong.map((t) => (
               <li key={t.topic} className="flex justify-between">
                 <span>{TOPIC_LABEL[t.topic as keyof typeof TOPIC_LABEL] ?? t.topic}</span>
-                <span className="font-mono">
+                <span className="font-mono text-xs">
                   {Math.round(t.rate * 100)}% · {t.n}
                 </span>
               </li>
@@ -138,27 +139,28 @@ export function AnalyticsPage() {
         </Card>
       </div>
 
-      <Card>
-        <h3 className="font-semibold">Time invested</h3>
-        <p className="mt-2 text-[var(--color-muted)]">
-          ~{Math.round(stats.timeSpentMs / 60000)} minutes across tracked attempts.
-        </p>
-      </Card>
-
-      <Card>
-        <h3 className="font-semibold">Mock history</h3>
-        <ul className="mt-3 space-y-2 text-sm text-[var(--color-muted)]">
-          {mockHistory.length === 0 && <li>No mocks yet.</li>}
-          {mockHistory.map((m) => (
-            <li key={m.at} className="flex justify-between font-mono text-xs">
-              <span>{m.at.slice(0, 19)}</span>
-              <span>
-                {m.score}/{m.total} · {m.minutes}m
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <Card>
+          <h3 className="text-sm font-medium">Time</h3>
+          <p className="mt-1 font-mono text-sm text-[var(--color-muted)]">
+            {Math.round(stats.timeSpentMs / 60000)} min
+          </p>
+        </Card>
+        <Card>
+          <h3 className="text-sm font-medium">Mocks</h3>
+          <ul className="mt-2 space-y-1.5 text-sm text-[var(--color-muted)]">
+            {mockHistory.length === 0 && <li>None</li>}
+            {mockHistory.map((m) => (
+              <li key={m.at} className="flex justify-between font-mono text-xs">
+                <span>{m.at.slice(0, 10)}</span>
+                <span>
+                  {m.score}/{m.total} · {m.minutes}m
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
     </div>
   )
 }
